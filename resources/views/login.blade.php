@@ -74,8 +74,17 @@
                     <input class="form-check-input" type="checkbox" id="rememberMe" name="remember" checked>
                     <label class="form-check-label mb-0 ms-3" for="rememberMe">Remember me</label>
                   </div>
+            
                   <div class="text-center">
                     <button type="submit" class="btn bg-gradient-dark w-100 my-4 mb-2">Sign in</button>
+                    
+                    <div class="separator my-3">
+                      <span class="text-muted font-weight-bold">OR</span>
+                    </div>
+                    
+                    <a href="{{ route('login.google') }}" class="btn btn-outline-danger w-100 mb-2">
+                      <i class="fa fa-google me-2"></i> Sign in with Google
+                    </a>
                   </div>
                   <p class="mt-4 text-sm text-center">
                     Don't have an account?

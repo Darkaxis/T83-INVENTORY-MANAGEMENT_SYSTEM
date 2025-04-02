@@ -117,7 +117,7 @@ return [
     | Supported drivers: "file", "cache"
     |
     */
-
+    'admin_url' => env('APP_ADMIN_URL', 'http://localhost.admin'),
     'maintenance' => [
         'driver' => env('APP_MAINTENANCE_DRIVER', 'file'),
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
