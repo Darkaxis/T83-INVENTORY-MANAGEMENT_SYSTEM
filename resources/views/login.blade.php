@@ -60,21 +60,30 @@
                 </div>
               </div>
                     <div class="card-body">
-                <form role="form" class="text-start" action="{{ route('dashboard') }}">
+                               <!-- filepath: d:\WST\inventory-management-system\resources\views\login.blade.php -->
+                <form role="form" class="text-start" method="POST" action="{{ route('login.submit') }}">
                   @csrf
                   <div class="input-group input-group-outline my-3">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-control" name="email">
+                    <input type="email" class="form-control" name="email" value="{{ old('email') }}">
                   </div>
+                  @error('email')
+                    <div class="text-danger text-xs mt-1">{{ $message }}</div>
+                  @enderror
+                  
                   <div class="input-group input-group-outline mb-3">
                     <label class="form-label">Password</label>
                     <input type="password" class="form-control" name="password">
                   </div>
+                  @error('password')
+                    <div class="text-danger text-xs mt-1">{{ $message }}</div>
+                  @enderror
+                  
                   <div class="form-check form-switch d-flex align-items-center mb-3">
                     <input class="form-check-input" type="checkbox" id="rememberMe" name="remember" checked>
                     <label class="form-check-label mb-0 ms-3" for="rememberMe">Remember me</label>
                   </div>
-            
+                
                   <div class="text-center">
                     <button type="submit" class="btn bg-gradient-dark w-100 my-4 mb-2">Sign in</button>
                     

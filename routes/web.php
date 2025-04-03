@@ -3,24 +3,28 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Auth\LoginController;
+use Illuminate\Support\Facades\Auth;
 
-// Public routes
-Route::domain('localhost')->group(function () {
+// Public/Guest routes
+Route::middleware('guest')->group(function () {
     Route::get('/', function () {
         return view('login');
     })->name('login');
-
+    
+    // Add POST route for manual login
+    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    
     Route::get('/register', function () {
         return view('register');
     })->name('register');
-    
-    // Google login (keep these on main domain)
-    Route::get('auth/google', [LoginController::class, 'redirectToGoogle'])->name('login.google');
-    Route::get('auth/google/callback', [LoginController::class, 'handleGoogleCallback']);
 });
 
-// Admin routes on subdomain
-Route::domain('localhost.admin')->group(function () {
+// Google authentication routes (accessible to anyone)
+Route::get('auth/google', [LoginController::class, 'redirectToGoogle'])->name('login.google');
+Route::get('auth/google/callback', [LoginController::class, 'handleGoogleCallback']);
+
+// Admin routes with authentication middleware
+Route::prefix('admin')->middleware('auth')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     
     Route::get('/stores', function () {
@@ -30,13 +34,7 @@ Route::domain('localhost.admin')->group(function () {
     Route::get('/users', function () {
         return view('users.index');
     })->name('users');
-    
-    // Add other admin routes here
 });
 
-//logout route
-Route::get('/logout', function () {
-    Auth::logout();
-    return redirect()->route('login');
-})->name('logout');
-// Route::get('/dashboard', function () {
+// Logout route (use the controller method)
+Route::middleware('auth')->get('/logout', [LoginController::class, 'logout'])->name('logout');
