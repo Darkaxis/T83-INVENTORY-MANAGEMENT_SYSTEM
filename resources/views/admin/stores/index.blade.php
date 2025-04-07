@@ -1,4 +1,4 @@
-<!-- filepath: d:\WST\inventory-management-system\resources\views\stores\index.blade.php -->
+<!-- resources/views/stores/index.blade.php -->
 @extends('layouts.app')
 
 @section('title', 'Store Management')
@@ -23,18 +23,6 @@
             </div>
           @endif
           
-          @if(session('error'))
-            <div class="alert alert-danger mx-3">
-              {{ session('error') }}
-            </div>
-          @endif
-          
-          @if(session('warning'))
-            <div class="alert alert-warning mx-3">
-              {{ session('warning') }}
-            </div>
-          @endif
-          
           <div class="table-responsive p-0">
             <table class="table align-items-center mb-0">
               <thead>
@@ -45,7 +33,6 @@
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Subdomain</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Staff</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Products</th>
-                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">DB Status</th>
                   <th class="text-secondary opacity-7" style="min-width: 200px;">Actions</th>
                 </tr>
               </thead>
@@ -70,36 +57,26 @@
                     <span class="badge badge-sm bg-gradient-{{ $store->status === 'active' ? 'success' : 'secondary' }}">{{ $store->status }}</span>
                   </td>
                   <td class="align-middle text-center">
-                    <a href="http://{{ $store->slug }}.localhost:8000/" target="_blank" class="text-secondary font-weight-bold text-xs">
+                    <a href="http://{{ $store->slug }}.localhost/admin" target="_blank" class="text-secondary font-weight-bold text-xs">
                       {{ $store->slug }}.localhost
                     </a>
                   </td>
                   <td class="align-middle text-center">
                     <a href="{{ route('admin.stores.staff.index', $store) }}" class="text-primary text-xs">
-                      {{ $store->users_count ?? 0 }} members
+                      {{ $store->users()->count() }} members
                     </a>
                   </td>
                   <td class="align-middle text-center">
                     <a href="{{ route('admin.stores.products.index', $store) }}" class="text-primary text-xs">
-                      {{ $store->products_count ?? 0 }} items
+                      {{ $store->products()->count() }} items
                     </a>
-                  </td>
-                  <td class="align-middle text-center">
-                    @if($store->database_connected)
-                      <span class="badge badge-sm bg-gradient-success">Connected</span>
-                    @else
-                      <span class="badge badge-sm bg-gradient-danger">Disconnected</span>
-                      <a href="{{ route('stores.show', $store) }}" class="text-warning text-xs d-block">
-                        <i class="fas fa-wrench"></i> Fix
-                      </a>
-                    @endif
                   </td>
                   <td class="align-middle">
                     <div class="btn-group">
                       <a href="{{ route('stores.edit', $store) }}" class="btn btn-sm btn-info me-1">
                         <i class="fas fa-edit"></i> Edit
                       </a>
-                      <a href="http://{{ $store->slug }}.localhost:8000/" target="_blank" class="btn btn-sm btn-primary me-1">
+                      <a href="http://{{ $store->slug }}.localhost/admin" target="_blank" class="btn btn-sm btn-primary me-1">
                         <i class="fas fa-external-link-alt"></i> Access
                       </a>
                       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $store->id }}">
@@ -116,11 +93,8 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                           </div>
                           <div class="modal-body">
-                            <p>Are you sure you want to delete <strong>{{ $store->name }}</strong>?</p>
-                            <p>This will permanently remove all store data including products, staff, and inventory records.</p>
-                            <div class="alert alert-warning">
-                              <strong>Important:</strong> This action will also delete the tenant database <code>tenant_{{ $store->slug }}</code>.
-                            </div>
+                            Are you sure you want to delete <strong>{{ $store->name }}</strong>? 
+                            This will permanently remove all store data including products, staff, and inventory records.
                           </div>
                           <div class="modal-footer">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -144,76 +118,43 @@
     </div>
   </div>
   
-  <!-- Quick actions panel -->
   <div class="row mt-4">
-    <div class="col-md-4">
+    <div class="col-12">
       <div class="card">
-        <div class="card-header p-3 pt-2">
-          <div class="icon icon-lg icon-shape bg-gradient-primary shadow-primary text-center border-radius-xl mt-n4 position-absolute">
-            <i class="fas fa-store"></i>
-          </div>
-          <div class="text-end pt-1">
-            <p class="text-sm mb-0 text-capitalize">Total Stores</p>
-            <h4 class="mb-0">{{ $stores->count() }}</h4>
-          </div>
+        <div class="card-header p-3">
+          <h5 class="mb-0">Quick Actions</h5>
+          <p class="text-sm mb-0">Manage your multi-tenant system</p>
         </div>
-        <hr class="dark horizontal my-0">
-        <div class="card-footer p-3">
-          <p class="mb-0">
-            <a href="{{ route('stores.create') }}" class="text-primary text-sm font-weight-bolder">
-              <i class="fas fa-plus-circle me-1"></i> Add New Store
-            </a>
-          </p>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header p-3 pt-2">
-          <div class="icon icon-lg icon-shape bg-gradient-success shadow-success text-center border-radius-xl mt-n4 position-absolute">
-            <i class="fas fa-database"></i>
+        <div class="card-body p-3">
+          <div class="row">
+            <div class="col-md-4">
+              <div class="card card-body border">
+                <h6 class="mb-3">Add New Store</h6>
+                <p class="mb-3 text-sm">Create a new store with its own subdomain, staff and inventory.</p>
+                <a href="{{ route('stores.create') }}" class="btn btn-sm btn-success">
+                  <i class="fas fa-plus"></i> Create Store
+                </a>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-body border">
+                <h6 class="mb-3">Manage System Users</h6>
+                <p class="mb-3 text-sm">Add or edit system administrators with full access.</p>
+                <a href="#" class="btn btn-sm btn-info">
+                  <i class="fas fa-users"></i> Manage Users
+                </a>
+              </div>
+            </div>
+            <div class="col-md-4">
+              <div class="card card-body border">
+                <h6 class="mb-3">System Settings</h6>
+                <p class="mb-3 text-sm">Configure global settings for your inventory system.</p>
+                <a href="#" class="btn btn-sm btn-primary">
+                  <i class="fas fa-cogs"></i> Settings
+                </a>
+              </div>
+            </div>
           </div>
-          <div class="text-end pt-1">
-            <p class="text-sm mb-0 text-capitalize">Connected Databases</p>
-            <h4 class="mb-0">{{ $stores->where('database_connected', true)->count() }}/{{ $stores->count() }}</h4>
-          </div>
-        </div>
-        <hr class="dark horizontal my-0">
-        <div class="card-footer p-3">
-          <p class="mb-0">
-            @if($stores->where('database_connected', false)->count() > 0)
-              <span class="text-warning text-sm font-weight-bolder">
-                <i class="fas fa-exclamation-triangle me-1"></i> {{ $stores->where('database_connected', false)->count() }} database(s) need attention
-              </span>
-            @else
-              <span class="text-success text-sm font-weight-bolder">
-                <i class="fas fa-check-circle me-1"></i> All databases connected
-              </span>
-            @endif
-          </p>
-        </div>
-      </div>
-    </div>
-    
-    <div class="col-md-4">
-      <div class="card">
-        <div class="card-header p-3 pt-2">
-          <div class="icon icon-lg icon-shape bg-gradient-warning shadow-warning text-center border-radius-xl mt-n4 position-absolute">
-            <i class="fas fa-cogs"></i>
-          </div>
-          <div class="text-end pt-1">
-            <p class="text-sm mb-0 text-capitalize">Active Stores</p>
-            <h4 class="mb-0">{{ $stores->where('status', 'active')->count() }}/{{ $stores->count() }}</h4>
-          </div>
-        </div>
-        <hr class="dark horizontal my-0">
-        <div class="card-footer p-3">
-          <p class="mb-0">
-            <a href="{{ route('admin.settings.tenant') }}" class="text-info text-sm font-weight-bolder">
-              <i class="fas fa-sliders-h me-1"></i> Tenant System Settings
-            </a>
-          </p>
         </div>
       </div>
     </div>
@@ -223,14 +164,10 @@
 
 @push('scripts')
 <script>
-  document.addEventListener('DOMContentLoaded', function() {
-    // You could add some JavaScript to enhance the UI
-    // For example, highlight rows with database issues
-    const problemRows = document.querySelectorAll('.badge.bg-gradient-danger');
-    problemRows.forEach(badge => {
-      const row = badge.closest('tr');
-      row.classList.add('table-warning');
-    });
-  });
+  // Initialize Bootstrap tooltips
+  var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+  var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+    return new bootstrap.Tooltip(tooltipTriggerEl)
+  })
 </script>
 @endpush

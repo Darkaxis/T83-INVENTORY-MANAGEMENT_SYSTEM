@@ -2,18 +2,41 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Store;
+use App\Models\User;
+use App\Models\Product;
 use Illuminate\Http\Request;
+use Carbon\Carbon;
 
 class DashboardController extends Controller
 {
-    /**
-     * Show the application dashboard.
-     *
-     * @return \Illuminate\Contracts\Support\Renderable
-     */
     public function index()
     {
+        // Get counts for the dashboard
+        $storesCount = Store::count();
+        $activeStoresCount = Store::where('status', 'active')->count();
+        $usersCount = User::count();
+        $productsCount = Product::count();
         
-        return view('admin.index');
+        // Get recent stores
+        $stores = Store::withCount(['users', 'products'])
+                      ->orderBy('created_at', 'desc')
+                      ->limit(5)
+                      ->get();
+        
+        // Get recent activity
+        $lastWeek = Carbon::now()->subDays(7);
+        $recentStoresCount = Store::where('created_at', '>=', $lastWeek)->count();
+        $recentUsersCount = User::where('created_at', '>=', $lastWeek)->count();
+        
+        return view('admin.dashboard', compact(
+            'stores',            
+            'storesCount',
+            'activeStoresCount',
+            'usersCount',
+            'productsCount',
+            'recentStoresCount',
+            'recentUsersCount'
+        ));
     }
 }

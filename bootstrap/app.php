@@ -23,6 +23,17 @@ return Application::configure(basePath: dirname(__DIR__))
             \App\Http\Middleware\AdminMiddleware::class,
         ]);
     })
+
+    ->withMiddleware(function (Middleware $middleware) {
+        // Register middleware aliases
+        $middleware->alias([
+            'admin' => \App\Http\Middleware\AdminMiddleware::class,
+            'store.subdomain' => \App\Http\Middleware\StoreSubdomainMiddleware::class,
+            'store.access' => \App\Http\Middleware\StoreAccessMiddleware::class,
+            'store.check' => \App\Http\Middleware\CheckStoreSubdomain::class,
+        ]);
+    })
+   
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

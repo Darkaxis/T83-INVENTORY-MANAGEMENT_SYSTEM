@@ -9,24 +9,34 @@
   <hr class="horizontal dark mt-0 mb-2">
   <div class="collapse navbar-collapse w-auto" id="sidenav-collapse-main">
     <ul class="navbar-nav">
+      
+            <!-- Admin menu items -->
+      @if(Auth::user() && Auth::user()->role === 'admin')
       <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active bg-gradient-dark text-white' : 'text-dark' }}" href="{{ route('dashboard') }}">
-          <i class="material-symbols-rounded opacity-5">dashboard</i>
-          <span class="nav-link-text ms-1">Dashboard</span>
+        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
+          <i class="fas fa-tachometer-alt"></i>
+          <span>Dashboard</span>
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('stores*') ? 'active bg-gradient-dark text-white' : 'text-dark' }}" href="{{ route('stores') }}">
-          <i class="material-symbols-rounded opacity-5">store</i>
-          <span class="nav-link-text ms-1">Stores</span>
+        <a class="nav-link {{ request()->routeIs('stores.*') ? 'active' : '' }}" href="{{ route('stores.index') }}">
+          <i class="fas fa-store"></i>
+          <span>Stores</span>
         </a>
       </li>
       <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('users*') ? 'active bg-gradient-dark text-white' : 'text-dark' }}" href="{{ route('users') }}">
-          <i class="material-symbols-rounded opacity-5">verified_user</i>
-          <span class="nav-link-text ms-1">Users</span>
+        <a class="nav-link" href="#">
+          <i class="fas fa-users"></i>
+          <span>System Users</span>
         </a>
       </li>
+      <li class="nav-item">
+        <a class="nav-link" href="#">
+          <i class="fas fa-cogs"></i>
+          <span>Settings</span>
+        </a>
+      </li>
+      @endif
     </ul>
   </div>
 </aside>
