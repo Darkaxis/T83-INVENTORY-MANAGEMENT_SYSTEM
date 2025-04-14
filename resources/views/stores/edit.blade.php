@@ -121,24 +121,68 @@
                     </select>
                   </div>
                 </div>
-              </div>
-              
-              @if(!$store->database_connected)
-              <div class="alert alert-warning">
-                <div class="d-flex">
-                  <div>
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                  </div>
-                  <div>
-                    <h4 class="alert-heading">Database Connection Issue</h4>
-                    <p>This store's database is not properly connected. You may need to rebuild the database.</p>
-                    <a href="{{ route('stores.rebuild-database', $store) }}" class="btn btn-sm btn-warning" 
-                       onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
-                      <i class="fas fa-database me-1"></i> Rebuild Database
-                    </a>
+                
+                @hasrole('super_admin')
+                <div class="col-md-6">
+                  <div class="form-group my-3">
+                    <label for="approved" class="ms-0">Approval Status</label>
+                    <div class="form-check form-switch">
+                      <input class="form-check-input" type="checkbox" id="approved" name="approved" value="1" {{ $store->approved ? 'checked' : '' }}>
+                      <label class="form-check-label" for="approved">
+                        Approved for database creation
+                      </label>
+                    </div>
+                    <small class="form-text text-muted d-block mt-1">
+                      @if(!$store->approved)
+                        Approving this store will create its database automatically.
+                      @elseif($store->approved && !$store->database_created)
+                        Store is approved, but database hasn't been created yet.
+                      @else
+                        Store is approved and database is created.
+                      @endif
+                    </small>
                   </div>
                 </div>
+                @endhasrole
               </div>
+              
+              @if(!$store->approved)
+                <div class="alert alert-warning">
+                  <div class="d-flex">
+                    <div>
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                    </div>
+                    <div>
+                      <h4 class="alert-heading">Pending Approval</h4>
+                      <p>This store needs admin approval before a database can be created.</p>
+                      
+                      @hasrole('super_admin')
+                      <form action="{{ route('stores.approve', $store) }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-sm btn-warning">
+                          <i class="fas fa-check me-1"></i> Approve & Create Database
+                        </button>
+                      </form>
+                      @endhasrole
+                    </div>
+                  </div>
+                </div>
+              @elseif(!$store->database_connected)
+                <div class="alert alert-warning">
+                  <div class="d-flex">
+                    <div>
+                      <i class="fas fa-exclamation-triangle me-2"></i>
+                    </div>
+                    <div>
+                      <h4 class="alert-heading">Database Connection Issue</h4>
+                      <p>This store's database is not properly connected. You need to build the database.</p>
+                      <a href="{{ route('stores.rebuild-database', $store) }}" class="btn btn-sm btn-warning" 
+                         onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
+                        <i class="fas fa-database me-1"></i> Rebuild Database
+                      </a>
+                    </div>
+                  </div>
+                </div>
               @endif
               
               <div class="row mt-4">
@@ -174,7 +218,15 @@
           </div>
           <div class="text-end pt-1">
             <p class="text-sm mb-0 text-capitalize">Database Status</p>
-            <h4 class="mb-0">{{ $store->database_connected ? 'Connected' : 'Disconnected' }}</h4>
+            <h4 class="mb-0">
+              @if(!$store->approved)
+                <span class="text-warning">Pending Approval</span>
+              @elseif($store->database_connected) 
+                <span class="text-success">Connected</span>
+              @else 
+                <span class="text-danger">Disconnected</span>
+              @endif
+            </h4>
           </div>
         </div>
         <div class="card-body">
@@ -199,10 +251,26 @@
                     </div>
                   </div>
                   <div class="d-flex align-items-center">
-                    @if($store->database_connected)
+                    @if(!$store->approved)
+                      <span class="badge bg-gradient-warning">Pending Approval</span>
+                    @elseif($store->database_connected)
                       <span class="badge bg-gradient-success">Connected</span>
                     @else
                       <span class="badge bg-gradient-danger">Disconnected</span>
+                    @endif
+                  </div>
+                </li>
+                <li class="list-group-item border-0 d-flex justify-content-between ps-0 mb-2 border-radius-lg">
+                  <div class="d-flex align-items-center">
+                    <div class="d-flex flex-column">
+                      <h6 class="mb-1 text-dark text-sm">Approval Status</h6>
+                    </div>
+                  </div>
+                  <div class="d-flex align-items-center">
+                    @if($store->approved)
+                      <span class="badge bg-gradient-success">Approved</span>
+                    @else
+                      <span class="badge bg-gradient-warning">Pending</span>
                     @endif
                   </div>
                 </li>
@@ -211,45 +279,58 @@
           </div>
         </div>
         <div class="card-footer p-3">
-          @if(!$store->database_connected)
-          <form action="{{ route('stores.rebuild-database', $store) }}" method="POST">
-            @csrf
-            <button type="submit" class="btn btn-sm btn-warning w-100" 
-                    onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
-              <i class="fas fa-database me-1"></i> Rebuild Database
+          @if(!$store->approved)
+            @hasrole('super_admin')
+            <form action="{{ route('stores.approve', $store) }}" method="POST">
+              @csrf
+              <button type="submit" class="btn btn-sm btn-warning w-100">
+                <i class="fas fa-check me-1"></i> Approve & Create Database
+              </button>
+            </form>
+            @else
+            <button type="button" class="btn btn-sm btn-outline-secondary w-100" disabled>
+              <i class="fas fa-clock me-1"></i> Awaiting Admin Approval
             </button>
-          </form>
+            @endhasrole
+          @elseif(!$store->database_connected)
+            <form action="{{ route('stores.rebuild-database', $store) }}" method="POST">
+              @csrf
+              <button type="submit" class="btn btn-sm btn-warning w-100" 
+                      onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
+                <i class="fas fa-database me-1"></i> Rebuild Database
+              </button>
+            </form>
           @else
-          <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#resetDatabaseModal">
-            <i class="fas fa-exclamation-triangle me-1"></i> Reset Database
-          </button>
-          
-          <!-- Reset Database Modal -->
-          <div class="modal fade" id="resetDatabaseModal" tabindex="-1" aria-labelledby="resetDatabaseModalLabel" aria-hidden="true">
-            <div class="modal-dialog">
-              <div class="modal-content">
-                <div class="modal-header">
-                  <h5 class="modal-title" id="resetDatabaseModalLabel">Confirm Database Reset</h5>
-                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                  <div class="alert alert-danger">
-                    <strong>WARNING:</strong> This will delete and recreate the store's database. All data for this store will be permanently lost.
+            <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#resetDatabaseModal">
+              <i class="fas fa-exclamation-triangle me-1"></i> Reset Database
+            </button>
+            
+            <!-- Reset Database Modal -->
+            <div class="modal fade" id="resetDatabaseModal" tabindex="-1" aria-labelledby="resetDatabaseModalLabel" aria-hidden="true">
+              <div class="modal-dialog">
+                <div class="modal-content">
+                  <div class="modal-header">
+                    <h5 class="modal-title" id="resetDatabaseModalLabel">Confirm Database Reset</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                   </div>
-                  <p>Are you absolutely sure you want to reset the database for <strong>{{ $store->name }}</strong>?</p>
-                  <p>Please type <strong>{{ $store->slug }}</strong> to confirm:</p>
-                  <input type="text" id="confirmSlug" class="form-control">
-                </div>
-                <div class="modal-footer">
-                  <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                  <form action="{{ route('stores.reset-database', $store) }}" method="POST">
-                    @csrf
-                    <button type="submit" id="confirmResetBtn" class="btn btn-danger" disabled>Reset Database</button>
-                  </form>
+                  <div class="modal-body">
+                    <div class="alert alert-danger">
+                      <strong>WARNING:</strong> This will delete and recreate the store's database. All data for this store will be permanently lost.
+                    </div>
+                    <p>Are you absolutely sure you want to reset the database for <strong>{{ $store->name }}</strong>?</p>
+                    <p>Please type <strong>{{ $store->slug }}</strong> to confirm:</p>
+                    <input type="text" id="confirmSlug" class="form-control">
+                  </div>
+                  <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form action="{{ route('stores.reset-database', $store) }}" method="POST">
+                      @csrf
+                      <button type="submit" id="confirmResetBtn" class="btn btn-danger" disabled>Reset Database</button>
+                    </form>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
           @endif
         </div>
       </div>
@@ -263,11 +344,12 @@
           </div>
           <div class="text-end pt-1">
             <p class="text-sm mb-0 text-capitalize">Staff Members</p>
-            <h4 class="mb-0">{{ $store->users_count ?? 0 }}</h4>
+            <h4 class="mb-0">{{ $store->database_connected ? ($store->users_count ?? 0) : 'N/A' }}</h4>
           </div>
         </div>
         <div class="card-body">
-          <h6 class="text-uppercase text-body text-xs font-weight-bolder mb-3">Options</h6>
+          <h6 class="text-uppercase text-body text-xs font-weight-bolder mb-3">Management Options</h6>
+          @if($store->approved && $store->database_connected)
           <div class="list-group">
             <a href="{{ route('admin.stores.staff.index', $store) }}" class="list-group-item list-group-item-action">
               <div class="d-flex w-100 justify-content-between">
@@ -291,6 +373,11 @@
               <p class="mb-1 text-sm">Configure store-specific settings</p>
             </a>
           </div>
+          @else
+          <div class="alert alert-info mb-0">
+            <i class="fas fa-info-circle me-1"></i> Management options will be available after the store is approved and the database is created.
+          </div>
+          @endif
         </div>
       </div>
     </div>

@@ -6,15 +6,12 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Store;
 use App\Services\TenantDatabaseManager;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
-use Laravel\Socialite\Facades\Socialite;
-use App\Models\User;
-use App\Models\AdminUser;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class LoginController extends Controller
 {
@@ -22,10 +19,10 @@ class LoginController extends Controller
 
     protected $redirectTo = '/admin/dashboard';
     protected $databaseManager;
-
+    
     public function __construct(TenantDatabaseManager $databaseManager)
     {
-        
+        $this->middleware('guest')->except('logout');
         $this->databaseManager = $databaseManager;
     }
 
@@ -34,210 +31,125 @@ class LoginController extends Controller
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Http\JsonResponse
-     *
-     * @throws \Illuminate\Validation\ValidationException
      */
     public function login(Request $request)
     {
         $this->validateLogin($request);
 
-        // Check if we're on a subdomain
-        $host = $request->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || ($parts[0] !== 'www' && $parts[0] !== 'localhost');
+        // Check if we're trying to login on a tenant subdomain
+        $tenantStoreId = session('tenant_store');
+        $tenantSlug = session('tenant_slug');
+       
+        // If tenant store ID and slug are set, attempt tenant login
+        if ($tenantStoreId && $tenantSlug) {
+            return $this->attemptTenantLogin($request, $tenantStoreId, $tenantSlug);
+        }
+
+        // Regular login for main domain
+        if ($this->attemptLogin($request)) {
+            return $this->sendLoginResponse($request);
+        }
+
+        return $this->sendFailedLoginResponse($request);
+    }
+    
+    /**
+     * Attempt to log the user into the tenant application.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  int  $storeId
+     * @param  string  $slug
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    protected function attemptTenantLogin(Request $request, $storeId, $slug)
+    {
+        $store = Store::findOrFail($storeId);
         
-        if ($isSubdomain) {
-            // For subdomain login, check tenant database
-            $subdomain = $parts[0];
-            
-            // Switch to main database to find the store
-            $this->databaseManager->switchToMain();
-            
-            $store = Store::where('slug', $subdomain)->first();
-            
-            if (!$store) {
-                return $this->sendFailedLoginResponse($request, 'Store not found');
-            }
-            
-            // Switch to tenant database for authentication
+        try {
+            // Switch to tenant database
             $this->databaseManager->switchToTenant($store);
             
-            // Attempt to log in (using tenant database)
-            if ($this->attemptLogin($request)) {
-                return $this->sendLoginResponse($request);
+            // Get user from tenant database
+            $user = DB::connection('tenant')
+                    ->table('users')
+                    ->where('email', $request->email)
+                    ->first();
+                    
+            if ($user && Hash::check($request->password, $user->password)) {
+                // Convert stdClass to array
+                $userData = (array) $user;
+                
+                // Create a custom guard for tenant users
+                Auth::guard('tenant')->loginUsingId($user->id);
+                
+                // Store tenant information in session
+                session(['is_tenant' => true]);
+                session(['tenant_user' => $userData]);
+                session(['tenant_store_id' => $store->id]);
+                session(['tenant_store_slug' => $slug]);
+                
+                // Switch back to main database
+                $this->databaseManager->switchToMain();
+                
+                // Log successful login
+                Log::info("Tenant user logged in", [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'store_id' => $store->id,
+                    'store_slug' => $slug
+                ]);
+                
+                return redirect()->intended('/products');
             }
             
             // Switch back to main database
             $this->databaseManager->switchToMain();
             
-            return $this->sendFailedLoginResponse($request);
-        } else {
-            // For main domain login, check central database
-            // We're using admin_users table for system admins
-            if (Auth::guard('admin')->attempt(
-                $request->only('email', 'password'),
-                $request->filled('remember')
-            )) {
-                return redirect()->intended(route('admin.dashboard'));
-            }
+            return back()->withErrors([
+                'email' => [trans('auth.failed')],
+            ])->withInput($request->only('email', 'remember'));
             
-            return $this->sendFailedLoginResponse($request);
+        } catch (\Exception $e) {
+            // Switch back to main database in case of error
+            $this->databaseManager->switchToMain();
+            
+            Log::error("Tenant login error: " . $e->getMessage(), [
+                'store_id' => $store->id,
+                'email' => $request->email,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return back()->withErrors([
+                'email' => ['An error occurred during login. Please try again.'],
+            ]);
         }
     }
-
-    /**
-     * The user has been authenticated.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  mixed  $user
-     * @return mixed
-     */
-    protected function authenticated(Request $request, $user)
-    {
-        // Get host to determine if we're on a subdomain
-        $host = $request->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || ($parts[0] !== 'www' && $parts[0] !== 'localhost');
-        
-        if ($isSubdomain) {
-            // For store staff, redirect to store dashboard
-            return redirect()->route('store.dashboard');
-        } else {
-            // For admin users, redirect to admin dashboard
-            return redirect()->route('admin.dashboard');
-        }
-    }
-
+    
     /**
      * Log the user out of the application.
      *
      * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\JsonResponse
+     * @return \Illuminate\Http\Response
      */
     public function logout(Request $request)
     {
-        // Check if we're on a subdomain
-        $host = $request->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || ($parts[0] !== 'www' && $parts[0] !== 'localhost');
-        
-        if ($isSubdomain) {
-            Auth::guard('web')->logout();
+        // Check if this is a tenant user logout
+        if (session('is_tenant')) {
+            Auth::guard('tenant')->logout();
+            
+            session()->forget([
+                'is_tenant', 
+                'tenant_user', 
+                'tenant_store_id', 
+                'tenant_store_slug', 
+                'tenant_store'
+            ]);
         } else {
-            Auth::guard('admin')->logout();
+            Auth::logout();
         }
-        
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
         
         return redirect('/');
     }
-    
-    /**
-     * Redirect the user to the Google authentication page.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function redirectToGoogle()
-    {
-        // Check if we're on a subdomain
-        $host = request()->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || ($parts[0] !== 'www' && $parts[0] !== 'localhost');
-        
-        // Store in session whether we're on a subdomain login
-        session(['is_subdomain_login' => $isSubdomain]);
-        
-        if ($isSubdomain) {
-            // Store the subdomain in session for callback
-            session(['login_subdomain' => $parts[0]]);
-        }
-        
-        return Socialite::driver('google')->redirect();
-    }
-    
-    /**
-     * Obtain the user information from Google.
-     *
-     * @return \Illuminate\Http\Response
-     */
-    public function handleGoogleCallback()
-    {
-        try {
-            $googleUser = Socialite::driver('google')->user();
-            
-            // Check if we're handling a subdomain login
-            $isSubdomain = session('is_subdomain_login', false);
-            
-            if ($isSubdomain) {
-                $subdomain = session('login_subdomain');
-                
-                // Switch to main database first to get the store
-                $this->databaseManager->switchToMain();
-                
-                $store = Store::where('slug', $subdomain)->first();
-                
-                if (!$store) {
-                    return redirect()->route('login')
-                        ->with('error', 'Store not found for this subdomain.');
-                }
-                
-                // Switch to tenant database
-                $this->databaseManager->switchToTenant($store);
-                
-                // Check if a user with this Google ID exists
-                $user = User::where('email', $googleUser->email)->first();
-                
-                if (!$user) {
-                    // Create the user if they don't exist
-                    $user = User::create([
-                        'name' => $googleUser->name,
-                        'email' => $googleUser->email,
-                        'password' => Hash::make(Str::random(16)), // Random password
-                        'store_id' => $store->id,
-                        'role' => 'staff', // Default role
-                        'google_id' => $googleUser->id,
-                    ]);
-                } else {
-                    // Update Google ID if it's not set
-                    if (empty($user->google_id)) {
-                        $user->google_id = $googleUser->id;
-                        $user->save();
-                    }
-                }
-                
-                // Log the user in
-                Auth::guard('web')->login($user);
-                
-                // Switch back to main database
-                $this->databaseManager->switchToMain();
-                
-                return redirect()->route('store.dashboard');
-            } else {
-                // We're handling a main domain login (admin)
-                // Check if admin user exists
-                $adminUser = AdminUser::where('email', $googleUser->email)->first();
-                
-                if (!$adminUser) {
-                    // Only allow admins to log in - don't auto-create
-                    return redirect()->route('login')
-                        ->with('error', 'No administrator account found with this email.');
-                }
-                
-                // Update Google ID if it's not set
-                if (empty($adminUser->google_id)) {
-                    $adminUser->google_id = $googleUser->id;
-                    $adminUser->save();
-                }
-                
-                // Log the admin in
-                Auth::guard('admin')->login($adminUser);
-                
-                return redirect()->route('admin.dashboard');
-            }
-        } catch (\Exception $e) {
-            return redirect()->route('login')
-                ->with('error', 'Google authentication failed: ' . $e->getMessage());
-        }
-    }
+
+    // Rest of your controller methods...
 }

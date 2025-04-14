@@ -4,187 +4,121 @@
 namespace App\Http\Controllers;
 
 use App\Models\Store;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use App\Services\TenantDatabaseManager;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\StoreApproved;
+
+use Illuminate\Support\Str;
 
 class StoreController extends Controller
 {
     protected $databaseManager;
-    
+
     public function __construct(TenantDatabaseManager $databaseManager)
     {
         $this->databaseManager = $databaseManager;
     }
-    
-    /**
-     * Display a listing of the stores.
-     */
+
     public function index()
     {
-        try {
-            // The accessors will be automatically called when needed
-            $stores = Store::all();
-            
-            // Check each store's database connection status
-            foreach ($stores as $store) {
-                try {
-                    // Check database connection status without modifying properties directly
-                    // This uses the accessor we defined in the Store model
-                    $store->database_connected;
-                } catch (\Exception $e) {
-                    Log::warning("Error checking database for store: {$store->id}", [
-                        'error' => $e->getMessage()
-                    ]);
-                }
-            }
-            
-            return view('stores.index', compact('stores'));
-        } catch (\Exception $e) {
-            Log::error("Error in store index: " . $e->getMessage());
-            return view('stores.index', [
-                'stores' => [],
-                'error' => 'Error loading stores: ' . $e->getMessage()
-            ]);
-        }
+        $stores = Store::withCount(['users', 'products'])->get();
+        return view('stores.index', compact('stores'));
     }
-    
-    /**
-     * Show the form for creating a new store.
-     */
+
     public function create()
     {
         return view('stores.create');
     }
-    
-    /**
-     * Store a newly created store in storage.
-     */
-        /**
-     * Store a newly created store in storage.
-     */
+
     public function store(Request $request)
     {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:stores|alpha_dash',
+            'slug' => 'required|string|max:255|unique:stores,slug|regex:/^[a-z0-9\-]+$/',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
             'city' => 'nullable|string|max:100',
             'state' => 'nullable|string|max:100',
             'zip' => 'nullable|string|max:20',
-            'status' => 'required|in:active,inactive',
+            'status' => 'inactive',
+            'approved' => 'false',
+        ]);
+
+        
+        
+        $store = Store::create($validated);
+
+        // Check if the store is approved
+        if ($store->approved) {
+            $this->createDatabase($store);
+            Log::info("Store created and database created", ['store_id' => $store->id, 'slug' => $store->slug]);
+        }
+      
+        
+            return redirect()->route('stores.index')
+            ->with('success', 'Store created successfully. ' . 
+                   (!$store->approved ? 'It is pending admin approval.' : 'Database has been created.'));
+        
+
+        
+       
+    }
+    public function status(Request $request, Store $store)
+    {
+    
+        //check if store is already approved
+        if (!$store->approved) {
+            return back()->with('error', 'Store is not approved yet. Cannot change status.');
+        }
+        $store->update([
+            'status' => $store->status === 'active' ? 'inactive' : 'active'
         ]);
         
-        try {
-            DB::beginTransaction();
-            
-            // Create the store in the main database with only validated data
-            $store = new Store();
-            $store->name = $validated['name'];
-            $store->slug = $validated['slug'];
-            $store->email = $validated['email'] ?? null;
-            $store->phone = $validated['phone'] ?? null;
-            $store->address = $validated['address'] ?? null;
-            $store->city = $validated['city'] ?? null;
-            $store->state = $validated['state'] ?? null;
-            $store->zip = $validated['zip'] ?? null;
-            $store->status = $validated['status'];
-            
-            // Explicitly save the store
-            $saved = $store->save();
-            
-            if (!$saved) {
-                throw new \Exception("Failed to save store record");
-            }
-            
-            Log::info("Store created successfully", ['store_id' => $store->id, 'slug' => $store->slug]);
-            
-            // Database creation should be handled in the model's created event
-            // But let's make sure it happens
-            $result = $this->databaseManager->createTenantDatabase($store);
-            
-            if (!$result) {
-                throw new \Exception("Failed to create store database");
-            }
-            
-            DB::commit();
-            
-            // Verify the database was created successfully
-            try {
-                $this->databaseManager->switchToTenant($store);
-                $this->databaseManager->switchToMain();
-                
-                Log::info("Store database connected successfully", ['store_id' => $store->id]);
-            } catch (\Exception $e) {
-                Log::error("Database connection verification failed for store: {$store->id}", [
-                    'error' => $e->getMessage()
-                ]);
-                
-                return redirect()
-                    ->route('stores.index')
-                    ->with('warning', 'Store created but there may be issues with the database. Please verify it works correctly.');
-            }
-            
-            return redirect()
-                ->route('stores.index')
-                ->with('success', 'Store created successfully!');
-                
-        } catch (\Exception $e) {
-            DB::rollBack();
-            
-            Log::error("Failed to create store: " . $e->getMessage(), [
-                'request' => $request->all(),
-                'trace' => $e->getTraceAsString()
-            ]);
-            
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Failed to create store: ' . $e->getMessage());
-        }
+        return back()->with('success', 'Store status has been updated to ' . $store->status);
     }
-    
-    /**
-     * Display the specified store.
-     */
+    public function publicStorecreate(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:stores,slug|regex:/^[a-z0-9\-]+$/',
+            'email' => 'nullable|email|max:255',
+            'phone' => 'nullable|string|max:20',
+            'address' => 'nullable|string|max:255',
+            'city' => 'nullable|string|max:100',
+            'state' => 'nullable|string|max:100',
+            'zip' => 'nullable|string|max:20',
+            'status' => 'inactive',
+            'approved' => 'false',
+        ]);
+
+        // Set approved based on user role
+        
+        $store = Store::create($validated);
+
+        
+
+            return redirect()->route('public.store-requests.thank-you', $store);
+        
+    }
+
     public function show(Store $store)
     {
-        try {
-            // Check database connection status
-            $dbExists = $store->database_connected;
-            
-            return view('stores.show', compact('store', 'dbExists'));
-        } catch (\Exception $e) {
-            Log::error("Error showing store: " . $e->getMessage(), [
-                'store_id' => $store->id
-            ]);
-            
-            return redirect()
-                ->route('stores.index')
-                ->with('error', 'Error loading store details: ' . $e->getMessage());
-        }
+        return view('stores.show', compact('store'));
     }
-    
-    /**
-     * Show the form for editing the specified store.
-     */
+
     public function edit(Store $store)
     {
         return view('stores.edit', compact('store'));
     }
-    
-    /**
-     * Update the specified store in storage.
-     */
+
     public function update(Request $request, Store $store)
     {
-        $request->validate([
+        $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'slug' => 'required|string|max:255|unique:stores,slug,' . $store->id . '|regex:/^[a-z0-9\-]+$/',
             'email' => 'nullable|email|max:255',
             'phone' => 'nullable|string|max:20',
             'address' => 'nullable|string|max:255',
@@ -192,125 +126,274 @@ class StoreController extends Controller
             'state' => 'nullable|string|max:100',
             'zip' => 'nullable|string|max:20',
             'status' => 'required|in:active,inactive',
+            'approved' => 'boolean',
+        ]);
+
+     
+        
+            $wasApproved = $store->approved;
+            $nowApproved = $request->boolean('approved');
+            
+            // If the store is being approved for the first time
+            if (!$wasApproved && $nowApproved && !$store->database_created) {
+                $store->update($validated);
+                $this->createDatabase($store);
+                Log::info("Store approved and database created", ['store_id' => $store->id, 'slug' => $store->slug]);
+                return redirect()->route('stores.index')
+                    ->with('success', 'Store updated and database created successfully.');
+            }
+    
+        $store->update($validated);
+        
+        return redirect()->route('stores.index')
+            ->with('success', 'Store updated successfully.');
+    }
+
+    public function destroy(Store $store)
+    {
+        // Delete database if it exists
+        if ($store->database_created) {
+            try {
+                $databaseName = 'tenant_' . $store->slug;
+                $this->databaseManager->dropDatabase($databaseName);
+                Log::info("Deleted database for store", ['store_id' => $store->id, 'database' => $databaseName]);
+            } catch (\Exception $e) {
+                Log::error("Failed to delete database: " . $e->getMessage(), [
+                    'store_id' => $store->id, 
+                    'database' => 'tenant_' . $store->slug
+                ]);
+            }
+        }
+
+        $store->delete();
+        
+        return redirect()->route('stores.index')
+            ->with('success', 'Store deleted successfully.');
+    }
+
+public function approve(Request $request, Store $store)
+{
+    if (!$store->approved) {
+        // Update the store status to approved
+        $store->update([
+            'approved' => true,
+            'status' => 'active' // Automatically set to active when approved
+        ]);
+        
+        // Create database if not already created
+        if (!$store->database_created) {
+            $this->createDatabase($store);
+        }
+        
+        // Check if the email already exists in the main database
+        $existingUser = \App\Models\User::where('email', $store->email)->first();
+        
+        // Generate a unique store-specific password
+        $storePassword = Str::random(10);
+        
+        if ($existingUser) {
+            // User already exists in the main database
+            $user = $existingUser;
+            Log::info("Using existing user for store approval", [
+                'store_id' => $store->id,
+                'user_id' => $user->id
+            ]);
+        } else {
+            // Create a new user in the main database
+            $user = \App\Models\User::create([
+                'name' => $request->input('owner_name', 'Store Owner'),
+                'email' => $store->email,
+                'password' => bcrypt($storePassword),
+                'store_id' => $store->id,  // Set this to the latest store they own
+            ]);
+            
+            // Assign owner role
+            $user->assignRole('owner');
+            
+            Log::info("Created new user for store owner", [
+                'store_id' => $store->id,
+                'user_id' => $user->id
+            ]);
+        }
+        
+        // Create a store-user relationship record
+        \App\Models\StoreUser::create([
+            'store_id' => $store->id,
+            'user_id' => $user->id,
+            'role' => 'owner',
+            'access_level' => 'full',
+            'store_password' => bcrypt($storePassword), // Store unique password for this store
         ]);
         
         try {
-            // Don't allow changing the slug as it would break database connectivity
-            $request->request->remove('slug');
+            $tenantDB = 'tenant_' . $store->slug;
+            \Illuminate\Support\Facades\Config::set('database.connections.tenant.database', $tenantDB);
+            \Illuminate\Support\Facades\DB::purge('tenant');
             
-            $store->update($request->all());
-            
-            return redirect()
-                ->route('stores.index')
-                ->with('success', 'Store updated successfully!');
-        } catch (\Exception $e) {
-            Log::error("Error updating store: " . $e->getMessage(), [
-                'store_id' => $store->id,
-                'request' => $request->all()
+            // Create the user in the tenant database with the store-specific password
+            \Illuminate\Support\Facades\DB::connection('tenant')->table('users')->insert([
+                'name' => $user->name,
+                'email' => $user->email,
+                'password' => bcrypt($storePassword), // Use store-specific password
+                'role' => 'owner',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
             
-            return redirect()
-                ->back()
-                ->withInput()
-                ->with('error', 'Error updating store: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Remove the specified store from storage.
-     */
-    public function destroy(Store $store)
-    {
-        try {
-            Log::info("Attempting to delete store and database", ['store_id' => $store->id]);
-            
-            // The store's deleted event will handle dropping the database
-            $store->delete();
-            
-            return redirect()
-                ->route('stores.index')
-                ->with('success', 'Store deleted successfully!');
+            // Find the user ID in tenant database
+            $tenantUserId = \Illuminate\Support\Facades\DB::connection('tenant')
+                ->table('users')
+                ->where('email', $user->email)
+                ->value('id');
                 
-        } catch (\Exception $e) {
-            Log::error("Failed to delete store: " . $e->getMessage(), [
-                'store_id' => $store->id,
-                'exception' => $e
-            ]);
-            
-            return redirect()
-                ->route('stores.index')
-                ->with('error', 'Failed to delete store: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Rebuild a store's database if it's missing or corrupted.
-     */
-    public function rebuildDatabase(Store $store)
-    {
-        try {
-            // Drop the database if it exists
-            $this->databaseManager->dropTenantDatabase($store);
-            
-            // Create a new database
-            $result = $this->databaseManager->createTenantDatabase($store);
-            
-            if (!$result) {
-                return redirect()
-                    ->route('stores.show', $store)
-                    ->with('error', 'Failed to rebuild database for this store.');
+            // Assign owner role in tenant database
+            if ($tenantUserId) {
+                $roleId = \Illuminate\Support\Facades\DB::connection('tenant')
+                    ->table('roles')
+                    ->where('name', 'owner')
+                    ->value('id');
+                    
+                if ($roleId) {
+                    \Illuminate\Support\Facades\DB::connection('tenant')->table('model_has_roles')->insert([
+                        'role_id' => $roleId,
+                        'model_type' => 'App\\Models\\User',
+                        'model_id' => $tenantUserId
+                    ]);
+                }
             }
             
-            return redirect()
-                ->route('stores.show', $store)
-                ->with('success', 'Database rebuilt successfully!');
-        } catch (\Exception $e) {
-            Log::error("Failed to rebuild database: " . $e->getMessage(), [
-                'store_id' => $store->id
+            Log::info("User added to tenant database", [
+                'store_id' => $store->id, 
+                'user_id' => $user->id,
+                'tenant_user_id' => $tenantUserId ?? null
             ]);
-            
-            return redirect()
-                ->route('stores.show', $store)
-                ->with('error', 'Failed to rebuild database: ' . $e->getMessage());
+        } catch (\Exception $e) {
+            Log::error("Failed to add user to tenant database: " . $e->getMessage(), [
+                'store_id' => $store->id,
+                'user_id' => $user->id,
+                'trace' => $e->getTraceAsString()
+            ]);
         }
+        
+        // Store login details for notification
+        $loginDetails = [
+            'email' => $store->email,
+            'password' => $storePassword
+        ];
+        
+        $emailSent = false;
+        if ($store->email) {
+             
+            try {
+                // Send email immediately without queueing
+                Mail::to($store->email)->send(new StoreApproved($store, $loginDetails));
+                
+                $emailSent = true;
+                Log::info("Approval email sent to store owner", [
+                    'store_id' => $store->id, 
+                    'email' => $store->email
+                ]);
+            } catch (\Exception $e) {
+                $emailSent = false;
+                Log::error("Failed to send store approval email: " . $e->getMessage(), [
+                    'store_id' => $store->id,
+                    'email' => $store->email,
+                    'exception' => get_class($e),
+                    'trace' => $e->getTraceAsString()
+                ]);
+            }
+        }
+            
+        return redirect()->route('stores.index')
+            ->with('success', 'Store approved and database created successfully.' . 
+                ($emailSent ? ' Owner has been notified via email.' : ' Unable to send email notification.'));
     }
     
-    /**
-     * Display tenant dashboard
-     * This is accessed from the tenant subdomain
-     */
-    public function dashboard()
+    return redirect()->route('stores.index')
+        ->with('info', 'Store was already approved.');
+}
+    
+         
+
+    public function rebuildDatabase(Store $store)
     {
-        // This would be accessed from a tenant subdomain
-        // Authentication should already be handled by middleware
-        
-        // Get the current store from session (set by middleware)
-        $storeId = session('current_store_id');
-        
-        if (!$storeId) {
-            return redirect('/login')->with('error', 'Store session not found');
+        if (!$store->approved) {
+            return redirect()->route('stores.show', $store)
+                ->with('error', 'Store must be approved before creating a database.');
         }
         
+        $success = $this->createDatabase($store);
+        
+        if ($success) {
+            return redirect()->route('stores.show', $store)
+                ->with('success', 'Database rebuilt successfully.');
+        } else {
+            return redirect()->route('stores.show', $store)
+                ->with('error', 'Failed to rebuild database. Check logs for details.');
+        }
+    }
+
+    public function resetDatabase(Store $store)
+    {
         try {
-            // We're already in the tenant database context thanks to middleware
-            $user = Auth::user();
+            $databaseName = 'tenant_' . $store->slug;
             
-            return view('tenant.dashboard', [
-                'user' => $user,
-                'store_name' => session('current_store_name')
-            ]);
+            // Drop existing database
+            $this->databaseManager->dropDatabase($databaseName);
+            
+            // Create new database
+            $success = $this->createDatabase($store);
+            
+            if ($success) {
+                return redirect()->route('stores.show', $store)
+                    ->with('success', 'Database reset successfully.');
+            } else {
+                return redirect()->route('stores.show', $store)
+                    ->with('error', 'Failed to reset database. Check logs for details.');
+            }
         } catch (\Exception $e) {
-            Log::error("Error loading tenant dashboard: " . $e->getMessage());
-            return redirect('/login')->with('error', 'Error loading dashboard');
+            Log::error("Failed to reset database: " . $e->getMessage(), [
+                'store_id' => $store->id, 
+                'database' => 'tenant_' . $store->slug,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('stores.show', $store)
+                ->with('error', 'Failed to reset database: ' . $e->getMessage());
         }
     }
-    
-    /**
-     * Tenant selector for admin user
-     */
-    public function tenantSelector()
+
+    protected function createDatabase(Store $store)
     {
-        $stores = Store::where('status', 'active')->get();
-        return view('admin.tenant-selector', compact('stores'));
+        try {
+            $result = $this->databaseManager->createTenantDatabase($store);
+            
+            if ($result) {
+                $store->update(['database_created' => true]);
+                Log::info("Created database for store", ['store_id' => $store->id, 'slug' => $store->slug]);
+                return true;
+            }
+            
+            Log::error("Failed to create tenant database", ['store_id' => $store->id, 'slug' => $store->slug]);
+            return false;
+        } catch (\Exception $e) {
+            Log::error("Exception creating tenant database: " . $e->getMessage(), [
+                'store_id' => $store->id,
+                'slug' => $store->slug,
+                'trace' => $e->getTraceAsString()
+            ]);
+            return false;
+        }
     }
+    public function thankYou(Store $storeRequest)
+    {
+        return view('public.store-requests.thank-you', compact('storeRequest'));
+    }
+
+    public function showStoreRequestForm()
+    {
+        return view('public.store-requests.create');
+    }
+
+       
 }

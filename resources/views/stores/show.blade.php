@@ -140,26 +140,7 @@
                       <p class="text-sm mb-0">Database: <strong>tenant_{{ $store->slug }}</strong></p>
                     </div>
                   </div>
-                  
-                  @if(isset($dbExists) && !$dbExists)
-                    <div class="alert alert-warning text-white mt-3 mb-0">
-                      <i class="fas fa-exclamation-triangle me-1"></i>
-                      Database connection issue detected. Use the Rebuild button to recreate the tenant database.
-                    </div>
-                    <form action="{{ route('stores.rebuild-database', $store) }}" method="POST" class="mt-3">
-                      @csrf
-                      <button type="submit" class="btn btn-warning w-100">
-                        <i class="fas fa-sync-alt me-1"></i> Rebuild Database
-                      </button>
-                    </form>
-                  @else
-                    <form action="{{ route('stores.rebuild-database', $store) }}" method="POST" class="mt-3">
-                      @csrf
-                      <button type="submit" class="btn btn-outline-warning w-100" onclick="return confirm('Are you sure you want to rebuild the database? This will delete ALL store data and create a fresh database.')">
-                        <i class="fas fa-sync-alt me-1"></i> Reset & Rebuild Database
-                      </button>
-                    </form>
-                  @endif
+                
                 </div>
               </div>
             </div>

@@ -88,23 +88,7 @@
               </div>
             </div>
             
-            <div class="row mt-3">
-              <div class="col-md-6">
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" name="status" id="status_active" value="active" checked>
-                  <label class="form-check-label" for="status_active">
-                    Active
-                  </label>
-                </div>
-                <div class="form-check">
-                  <input class="form-check-input" type="radio" name="status" id="status_inactive" value="inactive">
-                  <label class="form-check-label" for="status_inactive">
-                    Inactive
-                  </label>
-                </div>
-              </div>
-            </div>
-            
+         
             <div class="row mt-4">
               <div class="col-md-12">
                 <button type="submit" class="btn bg-gradient-success">Create Store</button>

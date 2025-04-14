@@ -4,6 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <meta name="csrf-token" content="{{ csrf_token() }}">
   <title>
     @if(isset($store))
       {{ $store->name }} - Login
@@ -21,6 +22,7 @@
       <div class="container my-auto">
         <div class="row">
           <div class="col-lg-4 col-md-8 col-12 mx-auto">
+            
             <div class="card z-index-0 fadeIn3 fadeInBottom">
               <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                 <div class="bg-gradient-primary shadow-primary border-radius-lg py-3 pe-1">
@@ -33,7 +35,9 @@
                   </h4>
                 </div>
               </div>
+              
               <div class="card-body">
+                
                 @if(session('error'))
                   <div class="alert alert-danger text-white">
                     {{ session('error') }}
@@ -77,6 +81,21 @@
                   </a>
                   @endif
                 </form>
+                
+                                <!-- Add this to your homepage view -->
+                <div class="container mt-5">
+                    <div class="card">
+                        <div class="card-body text-center">
+                            <h3>Need Your Own Store?</h3>
+                            <p>Join our platform and start selling today!</p>
+                            <a href="{{ route('public.store-requests.create') }}" class="btn btn-lg bg-gradient-primary">
+                                Request Your Store Now
+                            </a>
+                            <!-- Add this near the top of the card-body section -->
+
+                        </div>
+                    </div>
+                </div>
               </div>
             </div>
           </div>

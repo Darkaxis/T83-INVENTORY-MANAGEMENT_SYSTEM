@@ -45,6 +45,7 @@
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Subdomain</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Staff</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Products</th>
+                  <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">Approval</th>
                   <th class="text-center text-uppercase text-secondary text-xxs font-weight-bolder opacity-7">DB Status</th>
                   <th class="text-secondary opacity-7" style="min-width: 200px;">Actions</th>
                 </tr>
@@ -84,16 +85,30 @@
                       {{ $store->products_count ?? 0 }} items
                     </a>
                   </td>
+                  <td class="align-middle text-center text-sm">
+                    @if($store->approved)
+                      <span class="badge badge-sm bg-gradient-success">Approved</span>
+                    @else
+                      <span class="badge badge-sm bg-gradient-warning">Pending</span>
+                      
+                      <form action="{{ route('stores.approve', $store) }}" method="POST" class="mt-1">
+                        @csrf
+                        <button type="submit" class="btn btn-xs btn-warning">
+                          Approve
+                        </button>
+                      </form>
+                      
+                    @endif
+                  </td>
                   <td class="align-middle text-center">
                     @if($store->database_connected)
                       <span class="badge badge-sm bg-gradient-success">Connected</span>
                     @else
                       <span class="badge badge-sm bg-gradient-danger">Disconnected</span>
-                      <a href="{{ route('stores.show', $store) }}" class="text-warning text-xs d-block">
-                        <i class="fas fa-wrench"></i> Fix
-                      </a>
+                     
                     @endif
                   </td>
+                  
                   <td class="align-middle">
                     <div class="btn-group">
                       <a href="{{ route('stores.edit', $store) }}" class="btn btn-sm btn-info me-1">
@@ -102,6 +117,15 @@
                       <a href="http://{{ $store->slug }}.localhost:8000/" target="_blank" class="btn btn-sm btn-primary me-1">
                         <i class="fas fa-external-link-alt"></i> Access
                       </a>
+                      
+                                           <!-- filepath: d:\WST\inventory-management-system\resources\views\stores\index.blade.php -->
+                      <form action="{{ route('stores.toggleStatus', $store) }}" method="POST" class="d-inline">
+                        @csrf
+                        <button type="submit" class="btn btn-sm {{ $store->status === 'active' ? 'btn-warning' : 'btn-success' }} me-1">
+                          <i class="fas {{ $store->status === 'active' ? 'fa-toggle-off' : 'fa-toggle-on' }}"></i>
+                          {{ $store->status === 'active' ? 'Disable' : 'Enable' }}
+                        </button>
+                      </form>
                       <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $store->id }}">
                         <i class="fas fa-trash"></i> Delete
                       </button>

@@ -1,18 +1,16 @@
 <?php
-// filepath: d:\WST\inventory-management-system\database\migrations\2023_01_01_000001_create_stores_table.php
+// filepath: d:\WST\inventory-management-system\database\migrations\2025_04_06_163938_create_stores_table.php
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateStoresTable extends Migration
+return new class extends Migration
 {
     /**
      * Run the migrations.
-     *
-     * @return void
      */
-    public function up()
+    public function up(): void
     {
         Schema::create('stores', function (Blueprint $table) {
             $table->id();
@@ -24,20 +22,19 @@ class CreateStoresTable extends Migration
             $table->string('city')->nullable();
             $table->string('state')->nullable();
             $table->string('zip')->nullable();
-            $table->enum('status', ['active', 'inactive'])->default('active');
+            $table->enum('status', ['active', 'inactive'])->default('inactive');
+            $table->boolean('approved')->default(false);
+            $table->boolean('database_created')->default(false);
             $table->timestamps();
+
         });
-        
     }
 
     /**
      * Reverse the migrations.
-     *
-     * @return void
      */
-    public function down()
+    public function down(): void
     {
-        Schema::dropIfExists('admin_users');
         Schema::dropIfExists('stores');
     }
-}
+};

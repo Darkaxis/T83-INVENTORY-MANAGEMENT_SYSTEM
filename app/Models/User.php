@@ -11,7 +11,6 @@ class User extends Authenticatable
     use HasFactory, Notifiable;
 
     protected $fillable = [
-        
         'name',
         'email',
         'password',
@@ -52,9 +51,28 @@ class User extends Authenticatable
     {
         return $this->store_id === $storeId;
     }
-    
-    public function store()
+
+    public function assignRole($role)
     {
-        return $this->belongsTo(Store::class);
+        $this->role = $role;
+        $this->save();
+    }
+    
+    
+    public function stores()
+    {
+        return $this->belongsToMany(Store::class, 'store_users')
+            ->withPivot('role', 'access_level')
+            ->withTimestamps();
+    }
+    
+    /**
+     * Get store-specific details including store-specific password
+     */
+    public function storeAccess($storeId)
+    {
+        return $this->hasMany(StoreUser::class)
+            ->where('store_id', $storeId)
+            ->first();
     }
 }

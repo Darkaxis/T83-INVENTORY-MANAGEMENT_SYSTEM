@@ -1,3 +1,4 @@
+<!-- filepath: d:\WST\inventory-management-system\resources\views\layouts\partials\sidebar.blade.php -->
 <aside class="sidenav navbar navbar-vertical navbar-expand-xs border-radius-lg fixed-start ms-2 bg-white my-2" id="sidenav-main">
   <div class="sidenav-header">
     <i class="fas fa-times p-3 cursor-pointer text-dark opacity-5 position-absolute end-0 top-0 d-none d-xl-none" aria-hidden="true" id="iconSidenav"></i>
@@ -10,33 +11,35 @@
   <div class="collapse navbar-collapse w-auto" id="sidenav-collapse-main">
     <ul class="navbar-nav">
       
-            <!-- Admin menu items -->
-      @if(Auth::user() && Auth::user()->role === 'admin')
+      <!-- Admin menu items -->
+     
       <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('dashboard') }}">
-          <i class="fas fa-tachometer-alt"></i>
-          <span>Dashboard</span>
+        <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" href="{{ route('dashboard') }}">
+          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-tachometer-alt text-dark"></i>
+          </div>
+          <span class="nav-link-text ms-1">Dashboard</span>
         </a>
       </li>
+      
       <li class="nav-item">
-        <a class="nav-link {{ request()->routeIs('stores.*') ? 'active' : '' }}" href="{{ route('stores.index') }}">
-          <i class="fas fa-store"></i>
-          <span>Stores</span>
+        <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('stores.*') ? 'active bg-light' : '' }}" href="{{ route('stores.index') }}">
+          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-store text-dark"></i>
+          </div>
+          <span class="nav-link-text ms-1">Stores</span>
         </a>
       </li>
+    
       <li class="nav-item">
-        <a class="nav-link" href="#">
-          <i class="fas fa-users"></i>
-          <span>System Users</span>
+        <a class="nav-link text-dark font-weight-bold" href="#">
+          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+            <i class="fas fa-cogs text-dark"></i>
+          </div>
+          <span class="nav-link-text ms-1">Settings</span>
         </a>
       </li>
-      <li class="nav-item">
-        <a class="nav-link" href="#">
-          <i class="fas fa-cogs"></i>
-          <span>Settings</span>
-        </a>
-      </li>
-      @endif
+  
     </ul>
   </div>
 </aside>

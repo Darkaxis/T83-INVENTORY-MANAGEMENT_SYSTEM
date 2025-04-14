@@ -4,257 +4,208 @@
 namespace App\Services;
 
 use App\Models\Store;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Str;
 
 class TenantDatabaseManager
 {
-    /**
-     * Switch to a tenant's database
-     *
-     * @param Store $store
-     * @return void
-     */
-    public function switchToTenant(Store $store)
-    {
-        // Create database config for this tenant
-        $databaseName = 'tenant_' . $store->slug;
-        
-        // Check if connection exists, if not create it
-        if (!array_key_exists($databaseName, Config::get('database.connections'))) {
-            // Clone the default mysql connection
-            $config = Config::get('database.connections.mysql');
-            
-            // Update the database name
-            $config['database'] = $databaseName;
-            
-            // Add the new connection
-            Config::set('database.connections.' . $databaseName, $config);
-        }
-        
-        // Set as default connection
-        Config::set('database.default', $databaseName);
-        
-        // Reconnect
-        DB::reconnect($databaseName);
-        
-        // Update session config for this tenant
-        Config::set('session.cookie', 'session_' . $store->slug);
-        
-        Log::info("Switched to tenant database", ['database' => $databaseName]);
-    }
+    protected $mainConnection;
     
     /**
-     * Switch back to the main database
-     *
-     * @return void
+     * Create a new TenantDatabaseManager instance.
      */
-    public function switchToMain()
+    public function __construct()
     {
-        // Set as default connection
-        Config::set('database.default', 'mysql');
-        
-        // Reconnect
-        DB::reconnect('mysql');
-        
-        // Reset session config
-        Config::set('session.cookie', 'laravel_session');
-        
-        Log::info("Switched to main database");
+        // Store the main database connection name
+        $this->mainConnection = config('database.default', 'mysql');
     }
-    
-    /**
-     * Create a new tenant database
-     *
-     * @param Store $store
-     * @return bool
-     */
-        
+
     public function createTenantDatabase(Store $store)
     {
         try {
-            Log::info("Creating tenant database", ['store_id' => $store->id, 'slug' => $store->slug]);
+            // Prefix to avoid collisions with existing databases
+            $tenantDB = 'tenant_' . $store->slug;
             
-            $databaseName = 'tenant_' . $store->slug;
+            // Create database with raw SQL for direct database creation
+            DB::statement("CREATE DATABASE IF NOT EXISTS `{$tenantDB}`");
             
-            // Check if database already exists
-            $dbExists = DB::select("SELECT SCHEMA_NAME FROM INFORMATION_SCHEMA.SCHEMATA WHERE SCHEMA_NAME = ?", [$databaseName]);
+            // Configure and connect to the new database
+            Config::set('database.connections.tenant.database', $tenantDB);
+            Config::set('database.connections.tenant.driver', 'mysql');
             
-            if (!empty($dbExists)) {
-                Log::info("Database already exists", ['database' => $databaseName]);
-                return true;
+            DB::purge('tenant');
+            
+            // Test connection to new database
+            try {
+                DB::connection('tenant')->getPdo();
+                Log::info("Successfully connected to tenant database: {$tenantDB}");
+            } catch (\Exception $e) {
+                Log::error("Failed to connect to tenant database after creation: {$e->getMessage()}");
+                throw $e;
             }
             
-            // Create database
-            Log::info("Attempting to create database", ['database' => $databaseName]);
-            DB::statement("CREATE DATABASE `{$databaseName}`");
+            // Create the necessary tables in the tenant database
+            $this->createTenantTables();
             
-            // Configure database connection
-            $config = Config::get('database.connections.mysql');
-            $config['database'] = $databaseName;
-            Config::set('database.connections.' . $databaseName, $config);
+            // Seed initial data
+            $this->seedTenantData();
             
-            // Switch to new database
-            DB::purge($databaseName);
-            DB::reconnect($databaseName);
+            // Mark database as created in the store record
+            $store->update(['database_created' => true]);
             
-            // Run migrations
-            Log::info("Running migrations on new database", ['database' => $databaseName]);
-            $this->runMigrations($databaseName);
-            
-            // Switch back to main database
-            $this->switchToMain();
-            
-            Log::info("Tenant database created successfully", ['database' => $databaseName]);
+            Log::info("Successfully created tenant database and tables for store: {$store->name}", [
+                'store_id' => $store->id,
+                'database' => $tenantDB
+            ]);
             
             return true;
         } catch (\Exception $e) {
             Log::error("Failed to create tenant database: " . $e->getMessage(), [
                 'store_id' => $store->id,
-                'database' => 'tenant_' . $store->slug,
+                'slug' => $store->slug,
                 'trace' => $e->getTraceAsString()
             ]);
-            
-            // Make sure we're back on the main connection
-            $this->switchToMain();
-            
             return false;
         }
     }
     
-    /**
-     * Run migrations for a tenant database
-     *
-     * @param string $connection
-     * @return void
-     */
-    private function runMigrations($connection)
+    protected function createTenantTables()
     {
-        $previousConnection = Config::get('database.default');
+        // Create users table for tenant authentication
+        Schema::connection('tenant')->create('users', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('email')->unique();
+            $table->timestamp('email_verified_at')->nullable();
+            $table->string('password');
+            $table->string('role')->default('user');
+            $table->rememberToken();
+            $table->timestamps();
+        });
         
-        try {
-            Config::set('database.default', $connection);
+        // Create password resets table
+        Schema::connection('tenant')->create('password_resets', function (Blueprint $table) {
+            $table->string('email')->index();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
+        });
+        
+        // Create roles table
+        Schema::connection('tenant')->create('roles', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('guard_name')->default('web');
+            $table->timestamps();
+        });
+        
+        // Create permissions table
+        Schema::connection('tenant')->create('permissions', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('guard_name')->default('web');
+            $table->timestamps();
+        });
+        
+        // Create model_has_roles pivot table
+        Schema::connection('tenant')->create('model_has_roles', function (Blueprint $table) {
+            $table->unsignedBigInteger('role_id');
+            $table->string('model_type');
+            $table->unsignedBigInteger('model_id');
             
-            $migrator = app('migrator');
-            $migrator->setConnection($connection);
-            
-            // Get tenant migration path
-            $path = database_path('migrations/tenant');
-            
-            if (file_exists($path)) {
-                Log::info("Running tenant migrations", ['connection' => $connection, 'path' => $path]);
-                $migrator->run($path);
-            } else {
-                Log::warning("Tenant migrations folder not found", ['path' => $path]);
-            }
-            
-        } catch (\Exception $e) {
-            Log::error("Failed to run migrations: " . $e->getMessage(), [
-                'connection' => $connection,
-                'trace' => $e->getTraceAsString()
-            ]);
-        } finally {
-            Config::set('database.default', $previousConnection);
-        }
+            $table->primary(['role_id', 'model_id', 'model_type']);
+        });
+        
+        // Create products table
+        Schema::connection('tenant')->create('products', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->string('sku')->unique()->nullable();
+            $table->text('description')->nullable();
+            $table->decimal('price', 10, 2)->default(0);
+            $table->integer('quantity')->default(0);
+            $table->unsignedBigInteger('category_id')->nullable();
+            $table->timestamps();
+        });
+        
+        // Create categories table
+        Schema::connection('tenant')->create('categories', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->text('description')->nullable();
+            $table->timestamps();
+        });
+        
+        Log::info("Created all required tables in tenant database");
     }
     
-    /**
-     * Drop a tenant database
-     *
-     * @param Store $store
-     * @return bool
-     */
-    public function dropTenantDatabase(Store $store)
+    protected function seedTenantData()
     {
-        $databaseName = 'tenant_' . $store->slug;
+        // Seed default roles
+        DB::connection('tenant')->table('roles')->insert([
+            ['name' => 'owner', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'manager', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'staff', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()]
+        ]);
+        
+        // Seed default categories
+        DB::connection('tenant')->table('categories')->insert([
+            ['name' => 'General', 'description' => 'Default category for products', 'created_at' => now(), 'updated_at' => now()]
+        ]);
+        
+        Log::info("Seeded initial data in tenant database");
+    }
+    
+    public function dropDatabase($databaseName)
+    {
+        // Validate database name to prevent SQL injection
+        if (!preg_match('/^tenant_[a-z0-9\-]+$/', $databaseName)) {
+            throw new \Exception("Invalid database name: {$databaseName}");
+        }
         
         try {
-            // Switch to the main connection to drop the database
-            $this->switchToMain();
-            
-            // Drop the database
-            $query = "DROP DATABASE IF EXISTS `$databaseName`";
-            DB::statement($query);
-            
-            Log::info("Dropped tenant database", ['store_id' => $store->id, 'database' => $databaseName]);
-            
+            DB::statement("DROP DATABASE IF EXISTS `{$databaseName}`");
+            Log::info("Successfully dropped database: {$databaseName}");
             return true;
         } catch (\Exception $e) {
-            Log::error('Failed to drop tenant database: ' . $e->getMessage(), [
-                'store_id' => $store->id,
-                'database' => $databaseName,
-                'exception' => $e
-            ]);
+            Log::error("Failed to drop database {$databaseName}: " . $e->getMessage());
             return false;
         }
     }
-    
-    /**
-     * Run migrations for a tenant database
-     *
-     * @return void
-     */
-    protected function migrateDatabase()
+    public function switchToTenant(Store $store)
     {
+        // Switch to the tenant database connection
+        Config::set('database.connections.tenant.driver', 'mysql');
+         
+        Config::set('database.connections.tenant.database', 'tenant_' . $store->slug);
+        DB::purge('tenant');
+        
+        // Test connection to the tenant database
         try {
-            // Get migration path for tenant-specific migrations
-            $migrationPath = database_path('migrations/tenant');
-            
-            // Run the migrations
-            Artisan::call('migrate', [
-                '--path' => 'database/migrations/tenant',
-                '--force' => true
-            ]);
-            
-            Log::info("Ran tenant migrations successfully");
+            DB::connection('tenant')->getPdo();
+            Log::info("Switched to tenant database: {$store->slug}");
         } catch (\Exception $e) {
-            Log::error('Failed to run tenant migrations: ' . $e->getMessage(), [
-                'exception' => $e
-            ]);
-            throw $e; // Re-throw so the caller can handle it
+            Log::error("Failed to switch to tenant database: " . $e->getMessage());
+            throw $e;
         }
     }
-    
-    /**
-     * Seed the tenant database with initial data
-     *
-     * @param Store $store
-     * @return void
-     */
-    protected function seedDatabase(Store $store)
+    public function switchToMain()
     {
+        // Switch back to the main database connection
+        Config::set('database.connections.tenant.database', null);
+        DB::purge('tenant');
+        
+        // Test connection to the main database
         try {
-            // Create initial categories
-            $categories = [
-                ['name' => 'General', 'description' => 'General products', 'store_id' => $store->id, 'created_at' => now(), 'updated_at' => now()],
-                ['name' => 'Electronics', 'description' => 'Electronic devices', 'store_id' => $store->id, 'created_at' => now(), 'updated_at' => now()],
-                ['name' => 'Office Supplies', 'description' => 'Office supplies and stationery', 'store_id' => $store->id, 'created_at' => now(), 'updated_at' => now()],
-            ];
-            
-            foreach ($categories as $category) {
-                DB::table('categories')->insert($category);
-            }
-            
-            // Create initial settings
-            DB::table('store_settings')->insert([
-                'store_id' => $store->id,
-                'low_stock_threshold' => 5,
-                'currency' => 'USD',
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
-            
-            Log::info("Seeded tenant database", ['store_id' => $store->id]);
+            DB::connection()->getPdo();
+            Log::info("Switched back to main database");
         } catch (\Exception $e) {
-            Log::error('Failed to seed tenant database: ' . $e->getMessage(), [
-                'store_id' => $store->id,
-                'exception' => $e
-            ]);
-            // We don't re-throw here because seeding failure shouldn't prevent database creation
+            Log::error("Failed to switch back to main database: " . $e->getMessage());
+            throw $e;
         }
+        
     }
 }
