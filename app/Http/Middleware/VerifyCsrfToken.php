@@ -14,5 +14,7 @@ class VerifyCsrfToken extends Middleware
         // Temporarily exclude products routes for debugging
         'products',
         'products/*',
+        'login',
+        
     ];
 }

@@ -18,7 +18,7 @@ class DatabaseSeeder extends Seeder
         AdminUser::create([
             'name' => 'System Administrator',
             'email' => 'admin@example.com',
-            'password' => Hash::make('admin123'), // Change this to a secure password
+            'password' => Hash::make('123'), // Change this to a secure password
             'role' => 'admin',
             'email_verified_at' => now(),
         ]);

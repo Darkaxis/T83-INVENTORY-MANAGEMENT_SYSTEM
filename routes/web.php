@@ -14,78 +14,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\TenantDatabaseManager;
 use App\Http\Middleware\EnsureTenantSession;
+use App\Http\Controllers\Admin\TenantSettingsController;
 
-
-// Main domain admin routes
-Route::middleware(['auth', 'admin'])->prefix('admin')->group(function () {
-    // Define the dashboard route
-   
-});
-    
-// Store management routes
-Route::resource('stores', StoreController::class);
-
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-// Staff management per store from admin panel
-Route::get('/stores/{store}/staff', [StoreStaffController::class, 'index'])->name('admin.stores.staff.index');
-Route::get('/stores/{store}/staff/create', [StoreStaffController::class, 'create'])->name('admin.stores.staff.create');
-Route::post('/stores/{store}/staff', [StoreStaffController::class, 'store'])->name('admin.stores.staff.store');
- Route::get('/settings/tenant', [App\Http\Controllers\Admin\TenantSettingsController::class, 'index'])
-        ->name('admin.settings.tenant');
-    Route::put('/settings/tenant', [App\Http\Controllers\Admin\TenantSettingsController::class, 'update'])
-        ->name('admin.settings.tenant.update');
-
-Route::get('/stores/{store}/staff/{id}', [StoreStaffController::class, 'show'])->name('admin.stores.staff.show');
-Route::get('/stores/{store}/staff/{id}/edit', [StoreStaffController::class, 'edit'])->name('admin.stores.staff.edit');
-Route::put('/stores/{store}/staff/{id}', [StoreStaffController::class, 'update'])->name('admin.stores.staff.update');
-Route::delete('/stores/{store}/staff/{id}', [StoreStaffController::class, 'destroy'])->name('admin.stores.staff.destroy');
-Route::get('/stores/{store}/staff/{id}/reset-password', [StoreStaffController::class, 'resetPassword'])->name('admin.stores.staff.reset_password');
-Route::post('/stores/{store}/staff/{id}/update-password', [StoreStaffController::class, 'updatePassword'])->name('admin.stores.staff.update_password');
-
-
-Route::post('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.toggleStatus');
-Route::post('/stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
-// Products management per store from admin panel
-Route::get('/stores/{store}/products', [StoreProductController::class, 'adminIndex'])->name('admin.stores.products.index');
-
-// Tenant/subdomain routes
-// Route::middleware(['store.check'])->group(function () {
-//     // Store public pages
-//     Route::get('/', function (Request $request) {
-//         $store = $request->store;
-//         return view('stores.storefront', compact('store'));
-//     });
-    
-//     // Store admin panel - requires authentication
-//     Route::middleware(['auth'])->prefix('admin')->group(function () {
-//         // Store dashboard
-//         Route::get('/dashboard', function (Request $request) {
-//             $store = $request->store;
-            
-//             if (!$store) {
-//                 return redirect('/')->with('error', 'Store not found');
-//             }
-            
-//             // Since we're already connected to the tenant database via middleware,
-//             // we can directly query the tables
-//             $lowStockCount = DB::table('products')->whereRaw('stock <= min_stock')->count();
-//             $recentProducts = DB::table('products')->orderBy('created_at', 'desc')->limit(5)->get();
-//             $categoriesCount = DB::table('categories')->count();
-            
-//             return view('stores.dashboard', compact('store', 'lowStockCount', 'recentProducts', 'categoriesCount'));
-//         })->name('store.dashboard');
-        
-//         // Products management for this store only
-//         Route::resource('products', ProductController::class);
-        
-//         // Staff management for this store only
-//         Route::resource('staff', StaffController::class);
-//     });
-// });
-
-
-Route::middleware(['web', 'guest'])->group(function () {
+/**
+ * Public Routes (No Auth Required)
+ */
+Route::middleware(['web'])->group(function () {
+    // Landing page with login
     Route::get('/', function (Request $request) {
         // Check if we're on a subdomain
         $host = $request->getHost();
@@ -101,7 +36,6 @@ Route::middleware(['web', 'guest'])->group(function () {
                 abort(404, 'Store not found');
             }
             
-            
             session(['tenant_store' => $store->id]);
             session(['tenant_slug' => $store->slug]);
             return view('login', compact('store'));  
@@ -111,40 +45,85 @@ Route::middleware(['web', 'guest'])->group(function () {
         return view('login');
     })->name('login');
     
-    // Make sure this POST route includes the 'web' middleware for CSRF protection
-    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    // Store request public flow
+    Route::get('/request-store', [StoreController::class, 'showStoreRequestForm'])
+        ->name('public.store-requests.create');
+    Route::post('/request-store', [StoreController::class, 'publicStorecreate'])
+        ->name('public.store-requests.store');
+    Route::get('/request-store/thank-you/{storeRequest}', [StoreController::class, 'thankYou'])
+        ->name('public.store-requests.thank-you');
 });
 
-
-// Google authentication
-Route::get('auth/google', [LoginController::class, 'redirectToGoogle'])->name('login.google');
-Route::get('auth/google/callback', [LoginController::class, 'handleGoogleCallback']);
-
-// Logout
-Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
-
-// Debugging route
-
-
-
-
-
-
-// Subdomain routes for tenant stores
-Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(function () {
-    // This ensures the web middleware is applied, which includes session and CSRF handling
+/**
+ * Authentication Routes
+ */
+Route::middleware(['web'])->group(function () {
+    // Login/logout routes
+    Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
+    Route::get('/logout', [LoginController::class, 'logout'])->name('logout');
     
+    // Google authentication
+    Route::get('auth/google', [LoginController::class, 'redirectToGoogle'])->name('login.google');
+    Route::get('auth/google/callback', [LoginController::class, 'handleGoogleCallback']);
+});
+
+/**
+ * Main System Admin Routes
+ */
+Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    
+    // Tenant settings
+    Route::get('/settings/tenant', [TenantSettingsController::class, 'index'])->name('admin.settings.tenant');
+    Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
+});
+
+/**
+ * Store Management Routes (Admin Panel)
+ */
+Route::middleware(['web', 'auth.multi'])->group(function () {
+    // Store resource
+    Route::resource('stores', StoreController::class);
+    Route::post('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.toggleStatus');
+    Route::post('/stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
+    
+    // Store staff management
+    Route::prefix('stores/{store}')->group(function () {
+        Route::get('/staff', [StoreStaffController::class, 'index'])->name('admin.stores.staff.index');
+        Route::get('/staff/create', [StoreStaffController::class, 'create'])->name('admin.stores.staff.create');
+        Route::post('/staff', [StoreStaffController::class, 'store'])->name('admin.stores.staff.store');
+        Route::get('/staff/{id}', [StoreStaffController::class, 'show'])->name('admin.stores.staff.show');
+        Route::get('/staff/{id}/edit', [StoreStaffController::class, 'edit'])->name('admin.stores.staff.edit');
+        Route::put('/staff/{id}', [StoreStaffController::class, 'update'])->name('admin.stores.staff.update');
+        Route::delete('/staff/{id}', [StoreStaffController::class, 'destroy'])->name('admin.stores.staff.destroy');
+        Route::get('/staff/{id}/reset-password', [StoreStaffController::class, 'resetPassword'])->name('admin.stores.staff.reset_password');
+        Route::post('/staff/{id}/update-password', [StoreStaffController::class, 'updatePassword'])->name('admin.stores.staff.update_password');
+        
+        // Products management per store
+        Route::get('/products', [StoreProductController::class, 'adminIndex'])->name('admin.stores.products.index');
+    });
+    
+    // Alternative dashboard route
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+});
+
+/**
+ * Tenant Subdomain Routes
+ */
+Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(function () {
+    // Product management
     Route::prefix('products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
         Route::post('/', [ProductController::class, 'store'])->name('store');
-        Route::get('/{product}', [ProductController::class, 'show'])->name('show');
-        Route::get('/{product}/edit', [ProductController::class, 'edit'])->name('edit');
-        Route::put('/{product}', [ProductController::class, 'update'])->name('update');
-        Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
+        Route::get('/{product_id}', [ProductController::class, 'show'])->name('show');
+        Route::get('/{product_id}/edit', [ProductController::class, 'edit'])->name('edit');
+        Route::put('/{product_id}', [ProductController::class, 'update'])->name('update');
+        Route::delete('/{product_id}', [ProductController::class, 'destroy'])->name('destroy');
     });
     
-    // Add a tenant debug route
+    // Tenant debug information
     Route::get('/debug-tenant', function (Request $request, $subdomain) {
         $store = \App\Models\Store::where('slug', $subdomain)->first();
         
@@ -164,7 +143,12 @@ Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(fun
     });
 });
 
+/**
+ * Debug/Testing Routes
+ * Remove these in production
+ */
 Route::domain('{subdomain}.localhost')->middleware(['web'])->group(function () {
+    // CSRF test form
     Route::get('/test-form', function () {
         return '<form method="POST" action="/test-form-submit">
             '.csrf_field().'
@@ -179,13 +163,6 @@ Route::domain('{subdomain}.localhost')->middleware(['web'])->group(function () {
 });
 
 
-Route::get('/request-store', [App\Http\Controllers\StoreController::class, 'showStoreRequestForm'])
-    ->name('public.store-requests.create');
-Route::post('/request-store', [App\Http\Controllers\StoreController::class, 'publicStorecreate'])
-    ->name('public.store-requests.store');
-Route::get('/request-store/thank-you/{storeRequest}', [App\Http\Controllers\StoreController::class, 'thankYou'])
-    ->name('public.store-requests.thank-you');
 
-    // Debug route - remove in production
-Route::get('/test-email', [StoreController::class, 'testEmail'])
-    ->name('test.email');
+// Debug route - remove in production
+Route::get('/test-email', [StoreController::class, 'testEmail'])->name('test.email');
