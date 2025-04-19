@@ -5,6 +5,9 @@ namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
+use function Laravel\Prompts\error;
 
 class MultiGuardAuth
 {
@@ -15,21 +18,26 @@ class MultiGuardAuth
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle($request, Closure $next)
-    {
-        // Check session-based auth flags first (fastest)
-        if (session('is_admin') || session('is_tenant')) {
-            return $next($request);
-        }
-        
-        // Check if authenticated with any guard
-        if (Auth::guard('web')->check() || 
-            Auth::guard('admin')->check() || 
-            Auth::guard('tenant')->check()) {
-            return $next($request);
-        }
-        
-        // Not authenticated with any method, redirect to login
-        return redirect()->route('login');
+             
+public function handle($request, Closure $next)
+{
+    // Use the same approach that works in your test
+    $isTenant = session('is_tenant', false);
+    $isAdmin = session('is_admin', false);
+    
+    Log::debug('Auth check in middleware', [
+        'path' => $request->path(),
+        'is_tenant' => $isTenant,
+        'is_admin' => $isAdmin,
+        'session_id' => session()->getId()
+    ]);
+
+    
+    
+    if ($isTenant || $isAdmin) {
+        return $next($request);
     }
+    
+    return redirect('/');
+}
 }

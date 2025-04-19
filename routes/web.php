@@ -14,7 +14,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use App\Services\TenantDatabaseManager;
 use App\Http\Middleware\EnsureTenantSession;
+use App\Http\Middleware\MultiGuardAuth;
 use App\Http\Controllers\Admin\TenantSettingsController;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Public Routes (No Auth Required)
@@ -24,12 +26,18 @@ Route::middleware(['web'])->group(function () {
     Route::get('/', function (Request $request) {
         // Check if we're on a subdomain
         $host = $request->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || (count($parts) > 1 && $parts[0] !== 'www' && $parts[0] !== 'localhost');
+    
+        $segments = explode('.', $host);
         
-        if ($isSubdomain) {
-            // For subdomain, pass the store to the login view
-            $subdomain = $parts[0];
+        // FIXED SUBDOMAIN DETECTION FOR VALET
+        $subdomain = null;
+
+        
+    if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[2] === 'test') {
+        $subdomain = $segments[0];
+        Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
+
+        
             $store = \App\Models\Store::where('slug', $subdomain)->first();
             
             if (!$store) {
@@ -39,7 +47,10 @@ Route::middleware(['web'])->group(function () {
             session(['tenant_store' => $store->id]);
             session(['tenant_slug' => $store->slug]);
             return view('login', compact('store'));  
-        }
+        
+    }
+        
+       
         
         // Regular login for main domain
         return view('login');
@@ -111,9 +122,9 @@ Route::middleware(['web', 'auth.multi'])->group(function () {
 /**
  * Tenant Subdomain Routes
  */
-Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(function () {
+Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 'tenant'])->group(function () {
     // Product management
-    Route::prefix('products')->name('products.')->group(function () {
+    Route::prefix('/products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
         Route::post('/', [ProductController::class, 'store'])->name('store');
@@ -122,23 +133,23 @@ Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(fun
         Route::put('/{product_id}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product_id}', [ProductController::class, 'destroy'])->name('destroy');
     });
-    
-    // Tenant debug information
-    Route::get('/debug-tenant', function (Request $request, $subdomain) {
-        $store = \App\Models\Store::where('slug', $subdomain)->first();
         
-        if ($store) {
-            session(['tenant_store' => $store->id]);
-            session(['tenant_slug' => $store->slug]);
-        }
-        
+    // Add this to routes/web.php inside the subdomain route group
+    Route::get('/login-debug', function (Request $request, $subdomain) {
         return [
-            'csrf_token' => csrf_token(),
-            'session_id' => session()->getId(),
-            'tenant_store' => session('tenant_store'),
-            'tenant_slug' => session('tenant_slug'),
             'subdomain' => $subdomain,
-            'store' => $store ? $store->toArray() : null,
+            'session_id' => session()->getId(),
+            'session' => [
+                'tenant_store' => session('tenant_store'),
+                'tenant_slug' => session('tenant_slug'),
+                'is_tenant' => session('is_tenant', false),
+            ],
+            'auth' => [
+                'check' => Auth::check(),
+                'guard' => Auth::getDefaultDriver(),
+                'tenant_check' => Auth::guard('tenant')->check(),
+            ],
+            'cookies' => $request->cookies->all(),
         ];
     });
 });
@@ -147,8 +158,9 @@ Route::domain('{subdomain}.localhost')->middleware(['web', 'tenant'])->group(fun
  * Debug/Testing Routes
  * Remove these in production
  */
-Route::domain('{subdomain}.localhost')->middleware(['web'])->group(function () {
+Route::domain('{subdomain}.inventory.test')->middleware(['web'])->group(function () {
     // CSRF test form
+    
     Route::get('/test-form', function () {
         return '<form method="POST" action="/test-form-submit">
             '.csrf_field().'
@@ -157,12 +169,110 @@ Route::domain('{subdomain}.localhost')->middleware(['web'])->group(function () {
         </form>';
     });
     
-    Route::post('/test-form-submit', function (Request $request) {
-        return "Form submitted successfully with data: " . $request->test;
-    });
+  
 });
 
+Route::get('/session-test-page', function() {
+    // Get current value first before modifying
+    $currentCount = session('page_loads', 0);
+    $newCount = $currentCount + 1;
+    
+    // Set values individually with explicit save
+    session(['page_loads' => $newCount]);
+    session(['is_tenant' => true]);
+    session(['test_time' => date('H:i:s')]);
+    
+    // Force save the session after updates
+    session()->save();
+    
+    // Build a simple HTML page
+    $html = '
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Session Test</title>
+        <style>
+            body { font-family: Arial, sans-serif; margin: 40px; }
+            div { margin-bottom: 20px; }
+            pre { background: #f5f5f5; padding: 10px; }
+        </style>
+    </head>
+    <body>
+        <h1>Session Test Page</h1>
+        
+        <div>
+            <h3>Session ID: ' . session()->getId() . '</h3>
+        </div>
+        
+        <div>
+            <h3>Current Session Data:</h3>
+            <pre>' . json_encode(session()->all(), JSON_PRETTY_PRINT) . '</pre>
+        </div>
+        
+        <div>
+            <h3>Page load count: ' . $newCount . '</h3>
+            <p>Previous count: ' . $currentCount . '</p>
+            <p>Last loaded at: ' . date('H:i:s') . '</p>
+        </div>
+        
+        <div>
+            <h3>Test Links (click these to test session persistence):</h3>
+            <ul>
+                <li><a href="/session-test-page">Reload this page</a></li>
+                <li><a href="/session-debug">View raw session debug data</a></li>
+                <li><a href="/clear-session">Clear session</a></li>
+            </ul>
+        </div>
+    </body>
+    </html>';
+    
+    return $html;
+});
 
+// Add a session clearing route
+Route::get('/clear-session', function() {
+    session()->flush();
+    return redirect('/session-test-page')->with('message', 'Session cleared');
+});
+// Add with other public routes
+Route::get('/clear-session', function() {
+    session()->flush();
+    return redirect('/session-test-page')->with('message', 'Session cleared');
+});
 
-// Debug route - remove in production
-Route::get('/test-email', [StoreController::class, 'testEmail'])->name('test.email');
+Route::get('/session-debug', function() {
+    // Try setting a value
+    $testValue = 'test-' . time();
+    session(['debug_value' => $testValue]);
+    
+    // Get session driver and storage details
+    $sessionDriver = config('session.driver');
+    $sessionPath = storage_path('framework/sessions');
+    $sessionFiles = [];
+    
+    if ($sessionDriver == 'file') {
+        if (is_dir($sessionPath)) {
+            $files = scandir($sessionPath);
+            foreach ($files as $file) {
+                if ($file != '.' && $file != '..') {
+                    $sessionFiles[] = $file;
+                }
+            }
+        }
+    }
+    
+    // Force save
+    session()->save();
+    
+    return [
+        'test_value_set' => $testValue,
+        'session_id' => session()->getId(),
+        'test_retrieved' => session('debug_value'),
+        'page_loads' => session('page_loads'),
+        'driver' => $sessionDriver,
+        'all_data' => session()->all(),
+        'is_started' => session()->isStarted(),
+        'session_files_count' => count($sessionFiles),
+        'recent_session_files' => array_slice($sessionFiles, -5),
+    ];
+});

@@ -21,10 +21,18 @@ class CheckStoreApprovalMiddleware
         $host = $request->getHost();
         $segments = explode('.', $host);
         
-        // If this is a subdomain request (has at least 3 segments in the domain)
-        if (count($segments) >= 2) {
-            $subdomain = $segments[0];
-            
+        // FIXED SUBDOMAIN DETECTION FOR VALET
+        $subdomain = null;
+
+        
+    if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[2] === 'test') {
+        $subdomain = $segments[0];
+        Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
+    }
+       
+        
+        // Only check store if it's a subdomain
+        if ($subdomain) {
             // Find the store by subdomain/slug
             $store = Store::where('slug', $subdomain)->first();
             

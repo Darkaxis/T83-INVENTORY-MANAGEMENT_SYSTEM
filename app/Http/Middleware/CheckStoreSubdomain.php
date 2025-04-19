@@ -6,20 +6,19 @@ use App\Models\Store;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CheckStoreSubdomain
 {
     public function handle(Request $request, Closure $next)
     {
         $host = $request->getHost();
-        $parts = explode('.', $host);
+        $segments = explode('.', $host);
         
-        // Skip this middleware for the main domain
-        if (count($parts) <= 2 || $parts[0] === 'www') {
-            return $next($request);
+        if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[2] === 'test') {
+            $subdomain = $segments[0];
+            Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
         }
-        
-        $subdomain = $parts[0];
         $store = Store::where('slug', $subdomain)->first();
         
         if (!$store) {

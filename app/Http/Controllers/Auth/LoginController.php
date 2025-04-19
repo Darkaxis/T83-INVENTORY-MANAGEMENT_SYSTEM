@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+use function Laravel\Prompts\error;
+
 class LoginController extends Controller
 {
     use AuthenticatesUsers;
@@ -93,25 +95,56 @@ class LoginController extends Controller
             // Switch to tenant database
             $this->databaseManager->switchToTenant($store);
             
-            // IMPORTANT: Use tenant guard for authentication
+            
             $success = $this->guard('tenant')->attempt(
                 $this->credentials($request), $request->filled('remember')
             );
-    
-            if ($success) {
+            
+                
+        if ($success) {
+            // First regenerate the session BEFORE setting variables
+            $request->session()->regenerate();
+            
+            if ($isSubdomain) {
                 $user = $this->guard('tenant')->user();
-                session([
+                
+                // Set session variables
+                $request->session()->put([
                     'is_tenant' => true,
                     'tenant_store_id' => $store->id,
                     'tenant_store_slug' => $store->slug
                 ]);
                 
-                Log::info("Tenant login successful", [
+                // Force save the session
+                $request->session()->save();
+                
+                Log::info("Tenant login successful with session data", [
                     'user_id' => $user->id,
-                    'email' => $user->email
+                    'email' => $user->email,
+                    'session_id' => session()->getId(),
+                    'is_tenant_set' => session('is_tenant', false)
                 ]);
+                
+                // Return redirect directly instead of using sendLoginResponse
+                return redirect()->intended('/products');
+            } else {
+                // Similar approach for admin login
+                $user = $this->guard('admin')->user();
+                
+                $request->session()->put('is_admin', true);
+                $request->session()->save();
+                
+                Log::info("Admin login successful with session data", [
+                    'user_id' => $user->id,
+                    'email' => $user->email,
+                    'session_id' => session()->getId(),
+                    'is_admin_set' => session('is_admin', false)
+                ]);
+                
+               
             }
-            
+        }
+              
             // Switch back to main database
             $this->databaseManager->switchToMain();
         } else {
@@ -192,9 +225,23 @@ class LoginController extends Controller
         
             return '/dashboard';
         } else if (session('is_tenant')) {
+        
             return '/products';
         }
         
         return $this->redirectTo;
+    }
+        
+    public function testLogin(Request $request)
+    {
+        // Set some session data
+        session(['is_tenant' => true]);
+        session(['tenant_store_id' => 1]);
+        session(['login_time' => now()->toString()]);
+        
+    
+        session()->save();
+    
+        return redirect('/session-test-page')->with('message', 'Test login completed');
     }
 }

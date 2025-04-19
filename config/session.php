@@ -3,7 +3,8 @@
 use Illuminate\Support\Str;
 
 return [
-
+    'path' => '/',
+    'same_site' => null,
     /*
     |--------------------------------------------------------------------------
     | Default Session Driver
@@ -156,7 +157,7 @@ return [
     |
     */
 
-    'domain' => env('SESSION_DOMAIN', null),
+    'domain' => env('SESSION_DOMAIN', '.localhost'),
 
     /*
     |--------------------------------------------------------------------------

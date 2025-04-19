@@ -22,8 +22,25 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Bootstrap any application services.
      */
-    public function boot(): void
+    public function boot()
     {
-        //
+        if (app()->environment('local')) {
+            // Special handling for localhost development
+            $host = request()->getHost();
+            
+            // Check if we're on a localhost subdomain
+            if (str_contains($host, 'localhost')) {
+                // Force the session driver to use a domain that works with subdomains
+                config(['session.domain' => '.localhost']);
+                
+                // For some browsers that don't respect the dot prefix on localhost
+                config(['session.same_site' => 'none']);
+                
+                // If you're using HTTP, allow non-secure cookies
+                if (!request()->secure()) {
+                    config(['session.secure' => false]);
+                }
+            }
+        }
     }
 }

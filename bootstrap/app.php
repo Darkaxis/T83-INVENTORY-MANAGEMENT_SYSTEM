@@ -47,7 +47,8 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web([
             \App\Http\Middleware\CheckStoreApprovalMiddleware::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
-           
+          
+
         ]);
     })
     ->withCommands([

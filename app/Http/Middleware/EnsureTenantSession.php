@@ -33,11 +33,18 @@ class EnsureTenantSession
                 abort(404, 'Store not found');
             }
             
-            // Set tenant information in session
+           
+        if (!session('tenant_store')) {
             session(['tenant_store' => $store->id]);
+        }
+        
+        if (!session('tenant_slug')) {
             session(['tenant_slug' => $store->slug]);
+        }
+        
+        if (!session('is_tenant')) {
             session(['is_tenant' => true]);
-            
+        }
             // Also make the store available in the request for controllers
             $request->merge(['store' => $store]);
             
