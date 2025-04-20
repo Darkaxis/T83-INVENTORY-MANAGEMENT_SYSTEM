@@ -162,12 +162,46 @@ class ProductController extends Controller
         // Switch to tenant database
         $this->databaseManager->switchToTenant($store);
         
-        $product = Product::findOrFail($product_id);
-    
-        // Switch back to main database
-        $this->databaseManager->switchToMain();
-        
-        return view('products.show', compact('product', 'store', 'product_id'));
+        try {
+            // Use query builder instead of Eloquent model to match your other methods
+            $product = DB::connection('tenant')->table('products')->find($product_id);
+            
+            if (!$product) {
+                $this->databaseManager->switchToMain();
+                abort(404, 'Product not found');
+            }
+            
+            // Convert to object for view consistency
+            $product = (object) $product;
+            
+            // Convert string dates to Carbon instances
+            if (property_exists($product, 'created_at')) {
+                $product->created_at = \Carbon\Carbon::parse($product->created_at);
+            }
+            
+            if (property_exists($product, 'updated_at')) {
+                $product->updated_at = \Carbon\Carbon::parse($product->updated_at);
+            }
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return view('products.show', compact('product', 'store', 'product_id'));
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error("Error finding product", [
+                'store' => $store->slug, 
+                'product_id' => $product_id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            // Return with error
+            return redirect()->route('products.index', ['subdomain' => $store->slug])
+                ->with('error', 'There was a problem loading the product.');
+        }
     }
 
     /**
@@ -180,12 +214,46 @@ class ProductController extends Controller
         // Switch to tenant database
         $this->databaseManager->switchToTenant($store);
         
-        $product = Product::findOrFail($product_id);
-        
-        // Switch back to main database
-        $this->databaseManager->switchToMain();
-        
-        return view('products.edit', compact('product', 'store', 'product_id'));
+        try {
+            // Use query builder instead of Eloquent model to match your other methods
+            $product = DB::connection('tenant')->table('products')->find($product_id);
+            
+            if (!$product) {
+                $this->databaseManager->switchToMain();
+                abort(404, 'Product not found');
+            }
+            
+            // Convert to object for view consistency
+            $product = (object) $product;
+            
+            // Convert string dates to Carbon instances
+            if (property_exists($product, 'created_at')) {
+                $product->created_at = \Carbon\Carbon::parse($product->created_at);
+            }
+            
+            if (property_exists($product, 'updated_at')) {
+                $product->updated_at = \Carbon\Carbon::parse($product->updated_at);
+            }
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return view('products.edit', compact('product', 'store', 'product_id'));
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error("Error finding product for edit", [
+                'store' => $store->slug, 
+                'product_id' => $product_id,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            // Return with error
+            return redirect()->route('products.index', ['subdomain' => $store->slug])
+                ->with('error', 'There was a problem loading the product for editing.');
+        }
     }
 
     /**

@@ -7,33 +7,6 @@
       </ol>
       <h6 class="font-weight-bolder mb-0">@yield('page-title', 'Inventory Management')</h6>
     </nav>
-    <div class="collapse navbar-collapse mt-sm-0 mt-2 me-md-0 me-sm-4" id="navbar">
-      <div class="ms-md-auto pe-md-3 d-flex align-items-center">
-        <div class="input-group input-group-outline">
-          <label class="form-label">Search...</label>
-          <input type="text" class="form-control">
-        </div>
-      </div>
-      <ul class="navbar-nav justify-content-end">
-        <!-- User dropdown, notifications, etc. -->
-        <li class="nav-item dropdown">
-          <a href="javascript:;" class="nav-link text-body p-0" id="userDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-            <i class="material-symbols-rounded me-1">account_circle</i>
-            <span class="d-sm-inline d-none">{{ Auth::user()->name ?? 'User' }}</span>
-          </a>
-          <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="userDropdown">
-            {{-- <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Profile</a></li>
-            <li><a class="dropdown-item" href="{{ route('settings') }}">Settings</a></li> --}}
-            <li><hr class="dropdown-divider"></li>
-            <li>
-              <form method="GET" action="{{ route('logout') }}">
-                @csrf
-                <button type="submit" class="dropdown-item">Logout</button>
-              </form>
-            </li>
-          </ul>
-        </li>
-      </ul>
-    </div>
+  
   </div>
 </nav>

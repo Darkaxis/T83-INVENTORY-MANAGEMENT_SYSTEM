@@ -4,6 +4,8 @@
 namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class Store extends Model
 {
@@ -78,51 +80,132 @@ class Store extends Model
         return $this->storeUsers()->wherePivot('role', 'owner')->first();
     }
     public function storeUsers()
-{
-    return $this->belongsToMany(User::class, 'store_users')
-        ->withPivot('role', 'access_level')
-        ->withTimestamps();
-}
-public function pricingTier()
-{
-    return $this->belongsTo(PricingTier::class);
-}
-
-/**
- * Check if store is within product limit
- */
-public function canAddProducts(): bool
-{
-    if (!$this->pricingTier) {
-        return true; // No tier restrictions
+    {
+        return $this->belongsToMany(User::class, 'store_users')
+            ->withPivot('role', 'access_level')
+            ->withTimestamps();
     }
-    
-    return $this->pricingTier->isWithinProductLimit($this);
-}
-
-/**
- * Check if store is within user limit
- */
-public function canAddUsers(): bool
-{
-    if (!$this->pricingTier) {
-        return true; // No tier restrictions
+    public function pricingTier()
+    {
+        return $this->belongsTo(PricingTier::class);
     }
-    
-    return $this->pricingTier->isWithinUserLimit($this);
-}
 
-/**
- * Get remaining products allowed
- */
-public function remainingProducts(): int
-{
-    if (!$this->pricingTier || $this->pricingTier->product_limit === null || $this->pricingTier->product_limit === -1) {
-        return -1; // Unlimited
+    /**
+     * Check if store is within product limit
+     */
+    public function canAddProducts(): bool
+    {
+        if (!$this->pricingTier) {
+            return true; // No tier restrictions
+        }
+        
+        return $this->pricingTier->isWithinProductLimit($this);
     }
-    
-    $productCount = Product::where('store_id', $this->id)->count();
-    return max(0, $this->pricingTier->product_limit - $productCount);
-}
 
+    /**
+     * Check if store is within user limit
+     */
+    public function canAddUsers(): bool
+    {
+        if (!$this->pricingTier) {
+            return true; // No tier restrictions
+        }
+        
+        return $this->pricingTier->isWithinUserLimit($this);
+    }
+
+    /**
+     * Get remaining products allowed
+     */
+    public function remainingProducts(): int
+    {
+        if (!$this->pricingTier || $this->pricingTier->product_limit === null || $this->pricingTier->product_limit === -1) {
+            return -1; // Unlimited
+        }
+        
+        $productCount = Product::where('store_id', $this->id)->count();
+        return max(0, $this->pricingTier->product_limit - $productCount);
+    }
+
+    /**
+     * Get the count of users from the tenant database
+     * 
+     * @return int
+     */
+    public function getTenantUserCount()
+    {
+        // If database isn't connected, return 0
+        if (!$this->approved || !$this->database_connected) {
+            return 0;
+        }
+        
+        try {
+            // Get the database manager
+            $dbManager = app(\App\Services\TenantDatabaseManager::class);
+            
+            // Switch to tenant database
+            $dbManager->switchToTenant($this);
+            
+            // Count users
+            $count = DB::connection('tenant')->table('users')->count();
+            
+            // Switch back to main
+            $dbManager->switchToMain();
+            
+            return $count;
+        } catch (\Exception $e) {
+            // Log error
+            Log::error("Error getting users count for store {$this->id}: {$e->getMessage()}");
+            
+            // Make sure we switch back
+            try {
+                $dbManager->switchToMain();
+            } catch (\Exception $e2) {
+                // Already logged
+            }
+            
+            return 0;
+        }
+    }
+
+    /**
+     * Get the count of products from the tenant database
+     * 
+     * @return int
+     */
+    public function getTenantProductCount()
+    {
+        // If database isn't connected, return 0
+        if (!$this->approved || !$this->database_connected) {
+            return 0;
+        }
+        
+        try {
+            // Get the database manager
+            $dbManager = app(\App\Services\TenantDatabaseManager::class);
+            
+            // Switch to tenant database
+            $dbManager->switchToTenant($this);
+            
+            // Count products
+            $count = DB::connection('tenant')->table('products')->count();
+            
+            // Switch back to main
+            $dbManager->switchToMain();
+            
+            return $count;
+        } catch (\Exception $e) {
+            // Log error
+            Log::error("Error getting product count for store {$this->id}: {$e->getMessage()}");
+            
+            // Make sure we switch back
+            try {
+                $dbManager->switchToMain();
+            } catch (\Exception $e2) {
+                // Already logged
+            }
+            
+            return 0;
+        }
+    }
 }

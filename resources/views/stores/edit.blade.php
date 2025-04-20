@@ -173,14 +173,7 @@
                     <div>
                       <i class="fas fa-exclamation-triangle me-2"></i>
                     </div>
-                    <div>
-                      <h4 class="alert-heading">Database Connection Issue</h4>
-                      <p>This store's database is not properly connected. You need to build the database.</p>
-                      <a href="{{ route('stores.rebuild-database', $store) }}" class="btn btn-sm btn-warning" 
-                         onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
-                        <i class="fas fa-database me-1"></i> Rebuild Database
-                      </a>
-                    </div>
+                    
                   </div>
                 </div>
               @endif
@@ -292,15 +285,7 @@
               <i class="fas fa-clock me-1"></i> Awaiting Admin Approval
             </button>
             @endhasrole
-          @elseif(!$store->database_connected)
-            <form action="{{ route('stores.rebuild-database', $store) }}" method="POST">
-              @csrf
-              <button type="submit" class="btn btn-sm btn-warning w-100" 
-                      onclick="return confirm('Are you sure you want to rebuild the database? This will create a new database if it doesn\'t exist.');">
-                <i class="fas fa-database me-1"></i> Rebuild Database
-              </button>
-            </form>
-          @else
+         
             <button type="button" class="btn btn-sm btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#resetDatabaseModal">
               <i class="fas fa-exclamation-triangle me-1"></i> Reset Database
             </button>
@@ -323,7 +308,7 @@
                   </div>
                   <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <form action="{{ route('stores.reset-database', $store) }}" method="POST">
+                 
                       @csrf
                       <button type="submit" id="confirmResetBtn" class="btn btn-danger" disabled>Reset Database</button>
                     </form>
@@ -365,13 +350,7 @@
               </div>
               <p class="mb-1 text-sm">View and manage store products</p>
             </a>
-            <a href="{{ route('admin.stores.settings', $store) }}" class="list-group-item list-group-item-action">
-              <div class="d-flex w-100 justify-content-between">
-                <h6 class="mb-1">Store Settings</h6>
-                <i class="fas fa-chevron-right"></i>
-              </div>
-              <p class="mb-1 text-sm">Configure store-specific settings</p>
-            </a>
+            
           </div>
           @else
           <div class="alert alert-info mb-0">

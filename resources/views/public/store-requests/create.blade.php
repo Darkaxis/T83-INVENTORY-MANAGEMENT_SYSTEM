@@ -148,7 +148,7 @@
                                     <select id="pricing_tier_id" name="pricing_tier_id" class="form-select">
                                         @foreach(\App\Models\PricingTier::where('is_active', true)->orderBy('sort_order')->get() as $tier)
                                         <option value="{{ $tier->id }}" {{ old('pricing_tier_id') == $tier->id ? 'selected' : '' }}>
-                                            {{ $tier->name }} - ${{ $tier->monthly_price }}/mo
+                                            {{ $tier->name }} - ₱{{ $tier->monthly_price }}/mo
                                         </option>
                                         @endforeach
                                     </select>

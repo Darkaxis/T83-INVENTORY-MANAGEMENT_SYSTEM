@@ -61,7 +61,9 @@
           </a>
         </li>
       @else
+
         <!-- Tenant menu items (subdomain) -->
+        
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('products.*') ? 'active bg-light' : '' }}" 
              href="{{ route('products.index', ['subdomain' => $subdomain]) }}">
@@ -72,15 +74,22 @@
           </a>
         </li>
         
+        @php
+            // Check if current user is a manager
+            $isManager = session('tenant_user_role') === 'manager';
+        @endphp
+
+        @if($isManager)
         <li class="nav-item">
-          {{-- <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('users.*') ? 'active bg-light' : '' }}"
-             href="{{ route('users.index', ['subdomain' => $parts[0]]) }}"> --}}
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('staff.*') ? 'active bg-light' : '' }}"
+             href="{{ route('staff.index', ['subdomain' => $subdomain]) }}">
             <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
               <i class="fas fa-users text-dark"></i>
             </div>
             <span class="nav-link-text ms-1">Users</span>
           </a>
         </li>
+        @endif
         
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('subscription.*') ? 'active bg-light' : '' }}"
@@ -91,8 +100,17 @@
             <span class="nav-link-text ms-1">Subscription</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('profile') ? 'active bg-light' : '' }}" 
+             href="{{ route('profile.password', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-box text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Profle</span>
+          </a>
+        </li>
       @endif
-  
+   
     </ul>
   </div>
 </aside>

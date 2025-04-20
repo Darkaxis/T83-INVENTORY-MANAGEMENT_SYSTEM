@@ -81,7 +81,7 @@ class LoginController extends Controller
         $subdomain = null;
         $isSubdomain = false;
         $segments = explode('.', $host);
-        if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[0]) {
+        if (count($segments) === 3 && $segments[1] === 'inventory') {
             $subdomain = $segments[0]; // Get the subdomain part
             
             $isSubdomain = true;
@@ -118,6 +118,8 @@ class LoginController extends Controller
                 // Set session variables
                 $request->session()->put([
                     'is_tenant' => true,
+                    'tenant_user_id' => $user->id,
+                    'tenant_user_role' => $user->role,
                     'tenant_store_id' => $store->id,
                     'tenant_store_slug' => $store->slug
                 ]);

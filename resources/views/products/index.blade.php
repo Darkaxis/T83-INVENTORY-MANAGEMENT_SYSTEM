@@ -2,107 +2,201 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container">
-    <h1>Products</h1>
+<div class="container py-4">
+    @php
+        // Define this variable early before it's used
+        $canAddProducts = $store->canAddProducts();
+    @endphp
     
-    @if(session('error'))
-        <div class="alert alert-danger">
-            {{ session('error') }}
-            
-            @if(session('limit_data'))
-                <div class="mt-2">
-                    <p>You have {{ session('limit_data.current') }} products out of {{ session('limit_data.limit') }} allowed in your current plan.</p>
-                    <a href="/{{ $store->slug }}/subscription" class="btn btn-warning">
-                        Upgrade Your Plan
-                    </a>
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <h1 class="display-5 fw-bold text-primary">
+                <i class="fas fa-boxes me-2"></i>Products
+                @if(!$products->isEmpty())
+                    <span class="badge bg-{{ $canAddProducts ? 'success' : 'danger' }} fs-6 ms-2">
+                        {{ $products->total() }}
+                        @if(session('limit_data'))
+                            / {{ session('limit_data.limit') }}
+                        @endif
+                    </span>
+                @endif
+            </h1>
+            <p class="text-muted">Manage your inventory items</p>
+        </div>
+        <div class="col-md-6 text-md-end d-flex align-items-center justify-content-md-end mt-3 mt-md-0">
+            @if($canAddProducts)
+                <a href="{{ route('products.create', ['subdomain' => $store->slug]) }}" 
+                   class="btn btn-primary btn-lg shadow-sm">
+                    <i class="fas fa-plus-circle me-2"></i>Add New Product
+                </a>
+            @else
+                <div>
+                    <button class="btn btn-secondary btn-lg shadow-sm" disabled>
+                        <i class="fas fa-plus-circle me-2"></i>Add New Product
+                    </button>
+                    <div class="text-danger mt-2 fw-bold">
+                        <i class="fas fa-exclamation-circle me-1"></i>
+                        You've reached your product limit. 
+                        <a href="/{{ $store->slug }}/subscription" class="text-danger text-decoration-underline">
+                            Upgrade your plan
+                        </a>
+                    </div>
                 </div>
             @endif
+        </div>
+    </div>
+
+    @if(session('error'))
+        <div class="alert alert-danger shadow-sm border-start border-danger border-4">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
+                </div>
+                <div>
+                    <h5 class="alert-heading">{{ session('error') }}</h5>
+                    @if(session('limit_data'))
+                        <p class="mb-0">You have <strong>{{ session('limit_data.current') }}</strong> products out of <strong>{{ session('limit_data.limit') }}</strong> allowed in your current plan.</p>
+                        <a href="/{{ $store->slug }}/subscription" class="btn btn-danger mt-2">
+                            <i class="fas fa-arrow-circle-up me-1"></i> Upgrade Your Plan
+                        </a>
+                    @endif
+                </div>
+            </div>
         </div>
     @endif
     
     @if(session('success'))
-        <div class="alert alert-success">
-            {{ session('success') }}
+        <div class="alert alert-success shadow-sm border-start border-success border-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                <span>{{ session('success') }}</span>
+            </div>
         </div>
     @endif
     
-    <div class="mb-3 d-flex align-items-center">
-        @php
-            $canAddProducts = $store->canAddProducts();
-        @endphp
-        
-        @if($canAddProducts)
-            <a href="{{ route('products.create', ['subdomain' => $store->slug]) }}" class="btn btn-primary">Add New Product</a>
-        @else
-            <button class="btn btn-secondary" disabled title="Product limit reached">Add New Product</button>
-            <div class="text-danger ml-3">
-                <span>You've reached your product limit. <a href="/{{ $store->slug }}/subscription">Upgrade your plan</a> to add more.</span>
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+        <div class="card-header bg-light py-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="mb-0">Your Inventory</h5>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <!-- Could add search/filter here -->
+                </div>
             </div>
-        @endif
-        
-        @if(!$products->isEmpty())
-            <div class="ml-auto">
-                <span class="badge {{ $canAddProducts ? 'badge-success' : 'badge-danger' }}">
-                    {{ $products->total() }} <!-- Changed from count() to total() for pagination -->
-                    @if(session('limit_data'))
-                        / {{ session('limit_data.limit') }}
-                    @endif
-                    products
-                </span>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="px-4">Name</th>
+                            <th>SKU</th>
+                            <th>Price</th>
+                            <th>Quantity</th>
+                            <th class="text-end px-4">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @forelse($products as $product)
+                            <tr>
+                                <td class="px-4">
+                                    <div class="fw-bold">{{ $product->name }}</div>
+                                </td>
+                                <td>
+                                    <span class="badge bg-light text-dark">{{ $product->sku }}</span>
+                                </td>
+                                <td>
+                                    <span class="text-success fw-bold">₱{{ number_format($product->price, 2) }}</span>
+                                </td>
+                                <td>
+                                    @php
+                                        $qty = $product->stock ?? $product->quantity;
+                                        $qtyClass = $qty > 10 ? 'success' : ($qty > 5 ? 'warning' : 'danger');
+                                    @endphp
+                                    <span class="badge bg-{{ $qtyClass }} rounded-pill px-3">
+                                        {{ $qty }}
+                                    </span>
+                                </td>
+                                <td class="text-end px-4">
+                                    <div class="d-flex justify-content-end gap-2">
+                                        <a href="{{ route('products.show', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
+                                           class="btn btn-sm btn-primary">
+                                            <i class="fas fa-eye"></i> View
+                                        </a>
+                                        <a href="{{ route('products.edit', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
+                                           class="btn btn-sm btn-warning">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <form action="{{ route('products.destroy', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
+                                              method="POST">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit" class="btn btn-sm btn-danger" 
+                                                    onclick="return confirm('Are you sure you want to delete this product?')">
+                                                <i class="fas fa-trash"></i> Delete
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="5" class="text-center p-5">
+                                    <div class="py-5">
+                                        <i class="fas fa-box-open fa-4x text-muted mb-3"></i>
+                                        <h4>No Products Found</h4>
+                                        <p class="text-muted">Start adding products to your inventory</p>
+                                        @if($canAddProducts)
+                                            <a href="{{ route('products.create', ['subdomain' => $store->slug]) }}" 
+                                               class="btn btn-primary mt-2">
+                                                <i class="fas fa-plus-circle me-2"></i>Add First Product
+                                            </a>
+                                        @endif
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
             </div>
-        @endif
-    </div>
-    
-    <table class="table table-striped">
-        <thead>
-            <tr>
-                <th>Name</th>
-                <th>SKU</th>
-                <th>Price</th>
-                <th>Quantity</th>
-                <th>Actions</th>
-            </tr>
-        </thead>
-        <tbody>
-            @forelse($products as $product)
-                <tr>
-                    <td>{{ $product->name }}</td>
-                    <td>{{ $product->sku }}</td>
-                    <td>${{ number_format($product->price, 2) }}</td>
-                    <td>{{ $product->stock ?? $product->quantity }}</td>
-                    <td>
-                        <div class="btn-group">
-                            <a href="{{ route('products.show', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
-                               class="btn btn-info btn-sm">
-                                <i class="fa fa-eye"></i> View
-                            </a>
-                            <a href="{{ route('products.edit', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
-                               class="btn btn-warning btn-sm">
-                                <i class="fa fa-edit"></i> Edit
-                            </a>
-                            <form action="{{ route('products.destroy', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" 
-                                  method="POST" style="display:inline;">
-                                @csrf
-                                @method('DELETE')
-                                <button type="submit" class="btn btn-danger btn-sm" 
-                                        onclick="return confirm('Are you sure you want to delete this product?')">
-                                    <i class="fa fa-trash"></i> Delete
-                                </button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            @empty
-                <tr>
-                    <td colspan="5" class="text-center">No products found.</td>
-                </tr>
-            @endforelse
-        </tbody>
-    </table>
-    
-    <!-- Add pagination links -->
-    <div class="d-flex justify-content-center">
-        {{ $products->appends(['subdomain' => $store->slug])->links() }}
+        </div>
+        <div class="card-footer bg-white py-3">
+            <div class="d-flex justify-content-center">
+                {{ $products->appends(['subdomain' => $store->slug])->links() }}
+            </div>
+        </div>
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    .pagination {
+        --bs-pagination-active-bg: #4e73df;
+        --bs-pagination-active-border-color: #4e73df;
+    }
+    
+    .table > :not(caption) > * > * {
+        vertical-align: middle;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0;
+    }
+    
+    .btn-group .btn:first-child {
+        border-top-left-radius: 0.25rem;
+        border-bottom-left-radius: 0.25rem;
+    }
+    
+    .btn-group .btn:last-child {
+        border-top-right-radius: 0.25rem;
+        border-bottom-right-radius: 0.25rem;
+    }
+    
+    .alert {
+        border-radius: 0.5rem;
+    }
+</style>
+@endpush

@@ -9,6 +9,7 @@ use App\Http\Controllers\StoreProductController;
 use App\Http\Controllers\StoreStaffController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\ProfileController;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -139,23 +140,20 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 't
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('tenant.subscription');
     Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('tenant.subscription.upgrade');
     // Add this to routes/web.php inside the subdomain route group
-    Route::get('/login-debug', function (Request $request, $subdomain) {
-        return [
-            'subdomain' => $subdomain,
-            'session_id' => session()->getId(),
-            'session' => [
-                'tenant_store' => session('tenant_store'),
-                'tenant_slug' => session('tenant_slug'),
-                'is_tenant' => session('is_tenant', false),
-            ],
-            'auth' => [
-                'check' => Auth::check(),
-                'guard' => Auth::getDefaultDriver(),
-                'tenant_check' => Auth::guard('tenant')->check(),
-            ],
-            'cookies' => $request->cookies->all(),
-        ];
-    });
+    
+
+    // Staff management
+    Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
+    Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
+    Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
+    Route::get('/staff/{staff_id}/edit', [StaffController::class, 'edit'])->name('staff.edit');
+    Route::put('/staff/{staff_id}', [StaffController::class, 'update'])->name('staff.update');
+    Route::delete('/staff/{staff_id}', [StaffController::class, 'destroy'])->name('staff.destroy');
+    Route::post('/staff/{staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.reset-password');
+
+    // Profile - Password change
+    Route::get('/profile/password', [ProfileController::class, 'showChangePasswordForm'])->name('profile.password');
+    Route::post('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.update-password');
 });
 
 /**

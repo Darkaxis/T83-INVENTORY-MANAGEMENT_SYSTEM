@@ -66,7 +66,7 @@ class StoreStaffController extends Controller
     public function create(Request $request)
     {
         $store = $this->getStore($request);
-        return view('stores.staff.create', compact('store'));
+        return view('staff.create', compact('store'));
     }
 
     /**

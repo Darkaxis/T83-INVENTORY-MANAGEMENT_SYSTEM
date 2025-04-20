@@ -23,7 +23,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'store.check' => \App\Http\Middleware\CheckStoreSubdomain::class,
             'store.approval' => \App\Http\Middleware\CheckStoreApprovalMiddleware::class,
             'tenant' => \App\Http\Middleware\EnsureTenantSession::class,
-           
+            'tenant.manager' => \App\Http\Middleware\TenantManagerMiddleware::class,
             'auth.multi' => \App\Http\Middleware\MultiGuardAuth::class,
     
         ])

@@ -1,5 +1,4 @@
-<!-- filepath: d:\WST\inventory-management-system\resources\views\products\edit.blade.php -->
-
+<!-- filepath: d:\WST\inventory-management-system\resources\views\staff\create.blade.php -->
 @extends('layouts.app')
 
 @section('content')
@@ -7,9 +6,9 @@
     <div class="row mb-4">
         <div class="col">
             <h1 class="display-5 fw-bold text-primary">
-                <i class="fas fa-edit me-2"></i>Edit Product
+                <i class="fas fa-user-plus me-2"></i>Add Staff Member
             </h1>
-            <p class="text-muted">Update product information in your inventory</p>
+            <p class="text-muted">Add a new staff member to your team</p>
         </div>
     </div>
     
@@ -28,43 +27,42 @@
         <div class="card-header bg-light py-3">
             <div class="row align-items-center">
                 <div class="col">
-                    <h6 class="mb-0 fw-bold">Product Information</h6>
+                    <h6 class="mb-0 fw-bold">Staff Information</h6>
                 </div>
             </div>
         </div>
         <div class="card-body p-4">
-            <form action="{{ route('products.update', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" method="POST">
+            <form action="{{ route('staff.store', ['subdomain' => $store->slug]) }}" method="POST">
                 @csrf
-                @method('PUT')
                 
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="name" class="form-label fw-bold">Product Name</label>
+                            <label for="name" class="form-label fw-bold">Full Name</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-box"></i></span>
+                                <span class="input-group-text"><i class="fas fa-user"></i></span>
                                 <input type="text" name="name" id="name" class="form-control @error('name') is-invalid @enderror" 
-                                       value="{{ old('name', $product->name) }}" required>
+                                       value="{{ old('name') }}" required>
                                 @error('name')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <small class="form-text text-muted">Enter a descriptive name for your product</small>
+                            <small class="form-text text-muted">Enter the staff member's full name</small>
                         </div>
                     </div>
                     
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="sku" class="form-label fw-bold">SKU</label>
+                            <label for="email" class="form-label fw-bold">Email Address</label>
                             <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-barcode"></i></span>
-                                <input type="text" name="sku" id="sku" class="form-control @error('sku') is-invalid @enderror" 
-                                       value="{{ old('sku', $product->sku) }}" required>
-                                @error('sku')
+                                <span class="input-group-text"><i class="fas fa-envelope"></i></span>
+                                <input type="email" name="email" id="email" class="form-control @error('email') is-invalid @enderror" 
+                                       value="{{ old('email') }}" required>
+                                @error('email')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <small class="form-text text-muted">Unique product identifier</small>
+                            <small class="form-text text-muted">The staff member will use this email to log in</small>
                         </div>
                     </div>
                 </div>
@@ -72,43 +70,35 @@
                 <div class="row mb-4">
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label for="price" class="form-label fw-bold">Price</label>
+                            <label for="role" class="form-label fw-bold">Role</label>
                             <div class="input-group">
-                                <span class="input-group-text">₱</span>
-                                <input type="number" name="price" id="price" step="0.01" min="0" 
-                                       class="form-control @error('price') is-invalid @enderror" 
-                                       value="{{ old('price', $product->price) }}" required>
-                                @error('price')
+                                <span class="input-group-text"><i class="fas fa-user-tag"></i></span>
+                                <select name="role" id="role" class="form-select @error('role') is-invalid @enderror" required>
+                                    <option value="staff" {{ old('role') == 'staff' ? 'selected' : '' }}>Staff</option>
+                                    <option value="manager" {{ old('role') == 'manager' ? 'selected' : '' }}>Manager</option>
+                                </select>
+                                @error('role')
                                     <div class="invalid-feedback">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <small class="form-text text-muted">Product retail price</small>
-                        </div>
-                    </div>
-                    
-                    <div class="col-md-6">
-                        <div class="form-group mb-3">
-                            <label for="stock" class="form-label fw-bold">Quantity in Stock</label>
-                            <div class="input-group">
-                                <span class="input-group-text"><i class="fas fa-cubes"></i></span>
-                                <input type="number" name="stock" id="stock" step="1" min="0" 
-                                       class="form-control @error('stock') is-invalid @enderror" 
-                                       value="{{ old('stock', $product->stock ?? $product->quantity) }}" required>
-                                @error('stock')
-                                    <div class="invalid-feedback">{{ $message }}</div>
-                                @enderror
-                            </div>
-                            <small class="form-text text-muted">Available inventory</small>
+                            <small class="form-text text-muted">
+                                Managers can add/remove other staff members and have full access
+                            </small>
                         </div>
                     </div>
                 </div>
                 
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    A random password will be generated and displayed after submission.
+                </div>
+                
                 <div class="d-flex justify-content-end gap-2 mt-4">
-                    <a href="{{ route('products.index', ['subdomain' => $store->slug]) }}" class="btn btn-light shadow-sm px-4">
+                    <a href="{{ route('staff.index', ['subdomain' => $store->slug]) }}" class="btn btn-light shadow-sm px-4">
                         <i class="fas fa-times me-2"></i>Cancel
                     </a>
                     <button type="submit" class="btn btn-primary shadow-sm px-4">
-                        <i class="fas fa-save me-2"></i>Update Product
+                        <i class="fas fa-save me-2"></i>Add Staff Member
                     </button>
                 </div>
             </form>
@@ -119,7 +109,7 @@
 
 @push('styles')
 <style>
-    .form-control:focus {
+    .form-control:focus, .form-select:focus {
         box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
         border-color: #bac8f3;
     }

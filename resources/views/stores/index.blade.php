@@ -76,7 +76,7 @@
                       @if($store->pricingTier)
                         <span class="badge badge-sm bg-gradient-info mb-1">{{ $store->pricingTier->name }}</span>
                         <small class="d-block text-xs">
-                          {{ $store->billing_cycle === 'monthly' ? '$' . $store->pricingTier->monthly_price . '/mo' : '$' . $store->pricingTier->annual_price . '/yr' }}
+                          {{ $store->billing_cycle === 'monthly' ? '₱' . $store->pricingTier->monthly_price . '/mo' : '$' . $store->pricingTier->annual_price . '/yr' }}
                         </small>
                         <button type="button" class="btn btn-xs btn-primary mt-1" data-bs-toggle="modal" data-bs-target="#changeTierModal{{ $store->id }}">
                           Change
@@ -111,7 +111,7 @@
                                   <option value="">Select a pricing tier</option>
                                   @foreach(\App\Models\PricingTier::all() as $tier)
                                   <option value="{{ $tier->id }}" {{ $store->pricing_tier_id == $tier->id ? 'selected' : '' }}>
-                                    {{ $tier->name }} - ${{ $tier->monthly_price }}/mo | ${{ $tier->annual_price }}/yr
+                                    {{ $tier->name }} - ₱{{ $tier->monthly_price }}/mo | ₱{{ $tier->annual_price }}/yr
                                   </option>
                                   @endforeach
                                 </select>
@@ -151,12 +151,12 @@
                   </td>
                   <td class="align-middle text-center">
                     <a href="http://{{ $store->slug }}.inventory.test/" target="_blank" class="text-secondary font-weight-bold text-xs">
-                      {{ $store->slug }}.localhost
+                      {{ $store->slug }}.inventory.test
                     </a>
                   </td>
                   <td class="align-middle text-center">
                     <a href="{{ route('admin.stores.staff.index', $store) }}" class="text-primary text-xs">
-                      {{ $store->users_count ?? 0 }} members
+                      <h4 class="mb-0">{{ $store->database_connected ? $store->getTenantUserCount() : 'N/A' }}</h4>
                     </a>
                     @if($store->pricingTier && $store->pricingTier->user_limit > 0)
                       <small class="d-block text-xs text-muted">
@@ -166,7 +166,7 @@
                   </td>
                   <td class="align-middle text-center">
                     <a href="{{ route('admin.stores.products.index', $store) }}" class="text-primary text-xs">
-                      {{ $store->products_count ?? 0 }} items
+                      <h4 class="mb-0">{{ $store->database_connected ? $store->getTenantProductCount() : 'N/A' }}</h4>
                     </a>
                     @if($store->pricingTier && $store->pricingTier->product_limit > 0)
                       <small class="d-block text-xs text-muted">
@@ -203,7 +203,7 @@
                       <a href="{{ route('stores.edit', $store) }}" class="btn btn-sm btn-info me-1">
                         <i class="fas fa-edit"></i> Edit
                       </a>
-                      <a href="http://{{ $store->slug }}.localhost:8000/" target="_blank" class="btn btn-sm btn-primary me-1">
+                      <a href="http://{{ $store->slug }}.inventory.test" target="_blank" class="btn btn-sm btn-primary me-1">
                         <i class="fas fa-external-link-alt"></i> Access
                       </a>
                       
