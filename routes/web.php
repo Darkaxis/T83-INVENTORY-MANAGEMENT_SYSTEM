@@ -20,7 +20,8 @@ use App\Http\Controllers\Admin\TenantSettingsController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Admin\PricingTierController;
-
+use App\Http\Controllers\StoreSettingsController;
+use App\Models\Store;
 /**
  * Public Routes (No Auth Required)
  */
@@ -123,9 +124,31 @@ Route::middleware(['web', 'auth.multi'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 });
 
-/**
- * Tenant Subdomain Routes
- */
+
+Route::get('/favicon/{store}', function (App\Models\Store $store) {
+    if ($store->logo_binary) {
+        // For favicon, we don't need to send a large image
+        // We return the binary data directly with appropriate content type
+        return response($store->logo_binary)
+            ->header('Content-Type', $store->logo_mime_type)
+            ->header('Cache-Control', 'public, max-age=86400'); // Cache for 1 day
+    }
+    
+    // Return default favicon if store has no logo
+    return response()->file(public_path('assets/img/favicon.png'));
+})->name('store.favicon');
+
+// Add to your routes file
+Route::get('/logo/{store}', function (Store $store) {
+    if ($store->logo_binary) {
+        return response($store->logo_binary)
+            ->header('Content-Type', $store->logo_mime_type);
+    }
+    
+    // Return default logo if none exists
+    return response()->file(public_path('assets/img/default-logo.png'));
+})->name('store.logo');
+
 Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 'tenant'])->group(function () {
     // Product management
     Route::prefix('/products')->name('products.')->group(function () {
@@ -150,7 +173,10 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 't
     Route::put('/staff/{staff_id}', [StaffController::class, 'update'])->name('staff.update');
     Route::delete('/staff/{staff_id}', [StaffController::class, 'destroy'])->name('staff.destroy');
     Route::post('/staff/{staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.reset-password');
-
+        
+    // Add to routes/web.php inside the tenant subdomain group
+    Route::get('/settings', [StoreSettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [StoreSettingsController::class, 'update'])->name('settings.update');
     // Profile - Password change
     Route::get('/profile/password', [ProfileController::class, 'showChangePasswordForm'])->name('profile.password');
     Route::post('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.update-password');

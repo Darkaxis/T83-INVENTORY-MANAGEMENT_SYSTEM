@@ -68,7 +68,7 @@
                                     <span>{{ $member->email }}</span>
                                 </td>
                                 <td>
-                                    <span class="badge bg-{{ $member->role == 'manager' ? 'primary' : 'secondary' }} rounded-pill px-3">
+                                    <span class="badge {{ $member->role == 'manager' ? 'role-badge-manager' : 'bg-secondary' }} rounded-pill px-3">
                                         {{ ucfirst($member->role) }}
                                     </span>
                                 </td>
@@ -130,9 +130,9 @@
 
 @push('styles')
 <style>
-    .form-control:focus {
-        box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
-        border-color: #bac8f3;
+    .form-control:focus, .form-select:focus {
+        box-shadow: 0 0 0 0.25rem var(--highlight, rgba(78, 115, 223, 0.25));
+        border-color: var(--tertiary, #bac8f3);
     }
     
     .input-group-text {
@@ -148,13 +148,44 @@
     }
     
     .btn-primary {
-        background-color: #4e73df;
-        border-color: #4e73df;
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
     }
     
     .btn-primary:hover {
-        background-color: #2e59d9;
-        border-color: #2653d4;
+        background-color: var(--secondary, #2e59d9);
+        border-color: var(--tertiary, #2653d4);
+    }
+    
+    .text-primary {
+        color: var(--primary, #4e73df) !important;
+    }
+    
+    .bg-primary {
+        background-color: var(--primary, #4e73df) !important;
+    }
+    
+    /* Style pagination to match accent color */
+    .pagination .page-item.active .page-link {
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
+    }
+    
+    .pagination .page-link {
+        color: var(--primary, #4e73df);
+    }
+    
+    .pagination .page-link:hover {
+        color: var(--secondary, #2e59d9);
+    }
+    
+    .pagination .page-link:focus {
+        box-shadow: 0 0 0 0.25rem var(--highlight, rgba(78, 115, 223, 0.25));
+    }
+    
+    /* Role badge styling - make manager badges use the primary color */
+    .role-badge-manager {
+        background-color: var(--primary, #4e73df) !important;
     }
 </style>
 @endpush

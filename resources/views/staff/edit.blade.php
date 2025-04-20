@@ -90,15 +90,7 @@
                     
                     <div class="col-md-6">
                         <div class="form-group mb-3">
-                            <label class="form-label fw-bold d-block">Status</label>
-                            <div class="form-check form-switch">
-                                <input type="checkbox" name="is_active" id="is_active" class="form-check-input"
-                                       {{ (old('is_active', $staff->is_active)) ? 'checked' : '' }}>
-                                <label for="is_active" class="form-check-label">Active Account</label>
-                            </div>
-                            <small class="form-text text-muted">
-                                Inactive accounts cannot log in to the system
-                            </small>
+                            
                         </div>
                     </div>
                 </div>
@@ -150,8 +142,8 @@
 @push('styles')
 <style>
     .form-control:focus, .form-select:focus, .form-check-input:focus {
-        box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
-        border-color: #bac8f3;
+        box-shadow: 0 0 0 0.25rem var(--highlight, rgba(78, 115, 223, 0.25));
+        border-color: var(--tertiary, #bac8f3);
     }
     
     .input-group-text {
@@ -167,18 +159,40 @@
     }
     
     .btn-primary {
-        background-color: #4e73df;
-        border-color: #4e73df;
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
     }
     
     .btn-primary:hover {
-        background-color: #2e59d9;
-        border-color: #2653d4;
+        background-color: var(--secondary, #2e59d9);
+        border-color: var(--tertiary, #2653d4);
+    }
+    
+    .text-primary {
+        color: var(--primary, #4e73df) !important;
     }
     
     .form-check-input:checked {
-        background-color: #4e73df;
-        border-color: #4e73df;
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
+    }
+    
+    /* Additional accent styling */
+    .card-header {
+        border-bottom: 2px solid var(--primary, #4e73df);
+    }
+    
+    .custom-control-input:checked ~ .custom-control-label::before {
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
+    }
+    
+    .btn-warning:hover {
+        background-color: #e0ac29;
+    }
+    
+    .btn-danger:hover {
+        background-color: #c0372a;
     }
 </style>
 @endpush

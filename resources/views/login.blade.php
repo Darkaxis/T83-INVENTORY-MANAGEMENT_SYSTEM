@@ -5,6 +5,11 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta name="csrf-token" content="{{ csrf_token() }}">
+  @if(isset($store))
+  <link rel="icon" href="{{ route('store.favicon', ['store' => $store->id]) }}">
+@else
+  <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.png') }}">
+@endif
   <title>
     @if(isset($store))
       {{ $store->name }} - Login
@@ -12,6 +17,70 @@
       Inventory Management System - Login
     @endif
   </title>
+  
+  @if(isset($store) && $store->accent_color)
+  <style>
+    :root {
+      --primary: {{ $store->getAccentColorCss()['primary'] ?? '#4e73df' }};
+      --secondary: {{ $store->getAccentColorCss()['secondary'] ?? '#2e59d9' }};
+      --tertiary: {{ $store->getAccentColorCss()['tertiary'] ?? '#2653d4' }};
+      --highlight: {{ $store->getAccentColorCss()['highlight'] ?? 'rgba(78, 115, 223, 0.25)' }};
+    }
+    
+    .bg-gradient-primary {
+      background-image: linear-gradient(195deg, var(--secondary) 0%, var(--primary) 100%) !important;
+    }
+    
+    .btn.bg-gradient-primary {
+      background-image: linear-gradient(195deg, var(--secondary) 0%, var(--primary) 100%);
+    }
+    
+    .btn.bg-gradient-primary:hover {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .text-primary {
+      color: var(--primary) !important;
+    }
+    
+    .bg-primary {
+      background-color: var(--primary) !important;
+    }
+    
+    .border-primary {
+      border-color: var(--primary) !important;
+    }
+    
+    .form-check-input:checked {
+      background-color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .form-control:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px var(--highlight);
+    }
+    
+    .input-group.focused .input-group-outline .form-label,
+    .input-group.focused .input-group-outline .form-label + .form-control {
+      color: var(--primary);
+      border-color: var(--primary);
+    }
+    
+    .btn-outline-danger {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+    
+    .btn-outline-danger:hover {
+      background-color: var(--primary);
+      border-color: var(--primary);
+      color: white;
+    }
+  </style>
+  @endif
+
   <!-- CSS files -->
   <link href="{{ asset('assets/css/material-dashboard.css') }}" rel="stylesheet" />
 </head>
@@ -26,6 +95,13 @@
             <div class="card z-index-0 fadeIn3 fadeInBottom">
               <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
                 <div class="bg-gradient-primary shadow-primary border-radius-lg py-3 pe-1">
+                  @if(isset($store) && $store->logo_binary)
+                    <div class="text-center mb-2">
+                      <img src="{{ route('store.logo', ['store' => $store->id]) }}" 
+                           style="max-height: 60px; max-width: 80%; object-fit: contain;" 
+                           alt="{{ $store->name }} logo" class="img-fluid">
+                    </div>
+                  @endif
                   <h4 class="text-white font-weight-bolder text-center mt-2 mb-0">
                     @if(isset($store))
                       {{ $store->name }}
@@ -88,7 +164,7 @@
                         <div class="card-body text-center">
                             <h3>Need Your Own Store?</h3>
                             <p>Join our platform and start selling today!</p>
-                            <a href="{{ route('public.store-requests.create') }}" class="btn btn-lg bg-gradient-primary">
+                            <a href="{{ route('public.store-requests.create') }}" class="btn btn-lg {{ isset($store) ? 'bg-gradient-primary' : 'bg-gradient-primary' }}">
                                 Request Your Store Now
                             </a>
                             <!-- Add this near the top of the card-body section -->

@@ -70,7 +70,7 @@ class StoreApproved extends Mailable
             ->markdown('emails.stores.approved')
             ->with([
                 'storeName' => $this->store->name,
-                'storeUrl' => isset($this->store->url) && $this->store->url ? $this->store->url : $storeUrl + ':8000',
+                'storeUrl' => isset($this->store->url) && $this->store->url ? $this->store->url : $storeUrl,
                 'hasCustomUrl' => isset($this->store->url) && $this->store->url,
                 'loginDetails' => $this->loginDetails,
                 'appName' => config('app.name')

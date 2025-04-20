@@ -110,8 +110,8 @@
 @push('styles')
 <style>
     .form-control:focus, .form-select:focus {
-        box-shadow: 0 0 0 0.25rem rgba(78, 115, 223, 0.25);
-        border-color: #bac8f3;
+        box-shadow: 0 0 0 0.25rem var(--highlight, rgba(78, 115, 223, 0.25));
+        border-color: var(--tertiary, #bac8f3);
     }
     
     .input-group-text {
@@ -127,13 +127,34 @@
     }
     
     .btn-primary {
-        background-color: #4e73df;
-        border-color: #4e73df;
+        background-color: var(--primary, #4e73df);
+        border-color: var(--primary, #4e73df);
     }
     
     .btn-primary:hover {
-        background-color: #2e59d9;
-        border-color: #2653d4;
+        background-color: var(--secondary, #2e59d9);
+        border-color: var(--tertiary, #2653d4);
+    }
+    
+    .text-primary {
+        color: var(--primary, #4e73df) !important;
+    }
+    
+    /* Additional accent styling */
+    .card-header {
+        border-bottom: 2px solid var(--primary, #4e73df);
+    }
+    
+    /* Make the alert info use the accent color */
+    .alert-info {
+        background-color: var(--highlight, rgba(78, 115, 223, 0.25));
+        border-color: var(--primary, #4e73df);
+        color: var(--tertiary, #2653d4);
+    }
+    
+    /* Custom select on focus */
+    .form-select:focus {
+        border-color: var(--primary, #4e73df);
     }
 </style>
 @endpush

@@ -9,9 +9,18 @@ use Illuminate\Http\Request;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
+
+
 {
+    //add middleware to check if user is admin
+    public function __construct()
+    {
+        
+        $this->middleware('admin'); // Ensure only admin can access this controller
+    }
     public function index()
     {
+
         // Get counts for the dashboard
         $storesCount = Store::count();
         $activeStoresCount = Store::where('status', 'active')->count();

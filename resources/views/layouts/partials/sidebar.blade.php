@@ -3,7 +3,8 @@
   <div class="sidenav-header">
     <i class="fas fa-times p-3 cursor-pointer text-dark opacity-5 position-absolute end-0 top-0 d-none d-xl-none" aria-hidden="true" id="iconSidenav"></i>
     <a class="navbar-brand px-4 py-3 m-0" href="{{ route('dashboard') }}">
-      <img src="{{ asset('assets/img/logo-ct-dark.png') }}" class="navbar-brand-img" width="26" height="26" alt="main_logo">
+      
+      <img src="{{ route('store.logo', $store) }}" alt="{{ $store->name }} logo">
       <span class="ms-1 text-sm text-dark">Inventory System</span>
     </a>
   </div>
@@ -89,6 +90,15 @@
             <span class="nav-link-text ms-1">Users</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('settings.*') ? 'active bg-light' : '' }}"
+             href="{{ route('settings.index', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-cogs text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Settings</span>
+          </a>
+        </li>
         @endif
         
         <li class="nav-item">
@@ -109,8 +119,22 @@
             <span class="nav-link-text ms-1">Profle</span>
           </a>
         </li>
+        
+        
       @endif
-   
+
+      <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold" href="{{ route('logout') }}"
+             onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-sign-out-alt text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Logout</span>
+          </a>
+          <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+              @csrf
+          </form>
+      </li>
     </ul>
   </div>
 </aside>
