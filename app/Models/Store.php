@@ -21,6 +21,11 @@ class Store extends Model
         'status',
         'approved',
         'database_created',
+        'pricing_tier_id',  // This must be included
+        'billing_cycle',
+        'subscription_start_date',
+        'subscription_end_date',
+        'auto_renew',
     ];
 
     protected $casts = [
@@ -77,6 +82,47 @@ class Store extends Model
     return $this->belongsToMany(User::class, 'store_users')
         ->withPivot('role', 'access_level')
         ->withTimestamps();
+}
+public function pricingTier()
+{
+    return $this->belongsTo(PricingTier::class);
+}
+
+/**
+ * Check if store is within product limit
+ */
+public function canAddProducts(): bool
+{
+    if (!$this->pricingTier) {
+        return true; // No tier restrictions
+    }
+    
+    return $this->pricingTier->isWithinProductLimit($this);
+}
+
+/**
+ * Check if store is within user limit
+ */
+public function canAddUsers(): bool
+{
+    if (!$this->pricingTier) {
+        return true; // No tier restrictions
+    }
+    
+    return $this->pricingTier->isWithinUserLimit($this);
+}
+
+/**
+ * Get remaining products allowed
+ */
+public function remainingProducts(): int
+{
+    if (!$this->pricingTier || $this->pricingTier->product_limit === null || $this->pricingTier->product_limit === -1) {
+        return -1; // Unlimited
+    }
+    
+    $productCount = Product::where('store_id', $this->id)->count();
+    return max(0, $this->pricingTier->product_limit - $productCount);
 }
 
 }

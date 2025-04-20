@@ -9,7 +9,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use App\Mail\StoreApproved;
-
+use App\Models\PricingTier;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class StoreController extends Controller
@@ -22,14 +23,14 @@ class StoreController extends Controller
     }
 
     public function index()
-    {
+    { 
         $stores = Store::withCount(['users', 'products'])->get();
         return view('stores.index', compact('stores'));
     }
 
     public function create()
-    {
-        return view('stores.create');
+    {    $pricingTiers = PricingTier::where('is_active', true)->orderBy('sort_order')->get();
+        return view('stores.create', compact('pricingTiers'));
     }
 
     public function store(Request $request)
@@ -45,20 +46,43 @@ class StoreController extends Controller
             'zip' => 'nullable|string|max:20',
             'status' => 'inactive',
             'approved' => 'false',
+            'pricing_tier_id' => 'required|exists:pricing_tiers,id',
+            'billing_cycle' => 'required|in:monthly,annual',
         ]);
 
+        $now = now();
+    $subscriptionEnd = $validated['billing_cycle'] === 'monthly' ? 
+        $now->copy()->addMonth() : 
+        $now->copy()->addYear();
         
-        
-        $store = Store::create($validated);
+        $store = Store::create([
+            'name' => $validated['name'],
+            'slug' => $validated['slug'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'state' => $validated['state'] ?? null,
+            'zip' => $validated['zip'] ?? null,
+            'status' => 'inactive',
+            'approved' => false,
+            'pricing_tier_id' => $validated['pricing_tier_id'],
+            'billing_cycle' => $validated['billing_cycle'],
+            'subscription_start_date' => $now,
+            'subscription_end_date' => $subscriptionEnd,
+            'auto_renew' => true,
+        ]);
 
         // Check if the store is approved
         if ($store->approved) {
             $this->createDatabase($store);
             Log::info("Store created and database created", ['store_id' => $store->id, 'slug' => $store->slug]);
         }
-      
+
         
-            return redirect()->route('stores.index')
+        
+        
+            return redirect()->route('stores.index' )
             ->with('success', 'Store created successfully. ' . 
                    (!$store->approved ? 'It is pending admin approval.' : 'Database has been created.'));
         
@@ -92,16 +116,49 @@ class StoreController extends Controller
             'zip' => 'nullable|string|max:20',
             'status' => 'inactive',
             'approved' => 'false',
+            'pricing_tier_id' => 'nullable|exists:pricing_tiers,id',
+            'billing_cycle' => 'nullable|in:monthly,annual',
         ]);
 
-        // Set approved based on user role
-        
-        $store = Store::create($validated);
+        // Set default pricing tier (Free tier) if not provided
+        if (empty($validated['pricing_tier_id'])) {
+            $freeTier = PricingTier::where('name', 'Free')->first();
+            if ($freeTier) {
+                $validated['pricing_tier_id'] = $freeTier->id;
+            }
+        }
 
-        
+        // Set default billing cycle if not provided
+        if (empty($validated['billing_cycle'])) {
+            $validated['billing_cycle'] = 'monthly';
+        }
 
-            return redirect()->route('public.store-requests.thank-you', $store);
-        
+        // Set subscription dates
+        $now = now();
+        $subscriptionEnd = $validated['billing_cycle'] === 'monthly' ? 
+            $now->copy()->addMonth() : 
+            $now->copy()->addYear();
+
+        // Create the store with all required fields
+        $store = Store::create([
+            'name' => $validated['name'],
+            'slug' => $validated['slug'],
+            'email' => $validated['email'] ?? null,
+            'phone' => $validated['phone'] ?? null,
+            'address' => $validated['address'] ?? null,
+            'city' => $validated['city'] ?? null,
+            'state' => $validated['state'] ?? null,
+            'zip' => $validated['zip'] ?? null,
+            'status' => 'inactive',
+            'approved' => false,
+            'pricing_tier_id' => $validated['pricing_tier_id'] ?? null,
+            'billing_cycle' => $validated['billing_cycle'] ?? 'monthly',
+            'subscription_start_date' => $now,
+            'subscription_end_date' => $subscriptionEnd,
+            'auto_renew' => true,
+        ]);
+
+        return redirect()->route('public.store-requests.thank-you', $store);
     }
 
     public function show(Store $store)
@@ -111,7 +168,8 @@ class StoreController extends Controller
 
     public function edit(Store $store)
     {
-        return view('stores.edit', compact('store'));
+        $pricingTiers = PricingTier::where('is_active', true)->orderBy('sort_order')->get();
+        return view('stores.edit', compact('store', 'pricingTiers'));
     }
 
     public function update(Request $request, Store $store)
@@ -393,6 +451,69 @@ public function approve(Request $request, Store $store)
     public function showStoreRequestForm()
     {
         return view('public.store-requests.create');
+    }
+        
+    /**
+     * Update the pricing tier for a store.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @param  \App\Models\Store  $store
+     * @return \Illuminate\Http\Response
+     */
+    public function updatePricingTier(Request $request, Store $store)
+    {
+        // First, let's log what we're receiving
+        Log::debug('Pricing tier update request', [
+            'store_id' => $store->id,
+            'store_name' => $store->name,
+            'request_data' => $request->all()
+        ]);
+        
+        // Validate the request
+        $request->validate([
+            'pricing_tier_id' => 'required|exists:pricing_tiers,id',
+            'billing_cycle' => 'required|in:monthly,annual',
+        ]);
+        
+        // Get the tier for logging/feedback
+        $pricingTier = \App\Models\PricingTier::find($request->pricing_tier_id);
+        
+        // Use direct query builder like in the test route that works
+        DB::table('stores')
+            ->where('id', $store->id)
+            ->update([
+                'pricing_tier_id' => $request->pricing_tier_id,
+                'billing_cycle' => $request->billing_cycle,
+                'auto_renew' => $request->has('auto_renew') ? 1 : 0,
+            ]);
+        
+        // Update dates if requested
+        if ($request->has('reset_dates')) {
+            $now = now();
+            $end = $request->billing_cycle === 'monthly' ? $now->copy()->addMonth() : $now->copy()->addYear();
+            
+            DB::table('stores')
+                ->where('id', $store->id)
+                ->update([
+                    'subscription_start_date' => $now,
+                    'subscription_end_date' => $end
+                ]);
+        }
+        
+        // Refresh the store data
+        $store = $store->fresh();
+        
+        // Log the result
+        Log::debug('Pricing tier update completed', [
+            'store' => $store->id,
+            'new_pricing_tier' => $store->pricing_tier_id,
+            'tier_exists' => $pricingTier ? true : false,
+            'tier_name' => $pricingTier ? $pricingTier->name : 'Unknown'
+        ]);
+        
+        // Redirect with success message
+        return redirect()->route('stores.index')
+            ->with('success', "Pricing tier for '{$store->name}' updated to '{$pricingTier->name}'");
     }
 
        

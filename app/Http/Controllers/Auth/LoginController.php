@@ -78,14 +78,21 @@ class LoginController extends Controller
     
         // Determine if we're on a subdomain
         $host = $request->getHost();
-        $parts = explode('.', $host);
-        $isSubdomain = count($parts) > 2 || (count($parts) > 1 && $parts[0] !== 'www' && $parts[0] !== 'localhost');
-        
+        $subdomain = null;
+        $isSubdomain = false;
+        $segments = explode('.', $host);
+        if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[0]) {
+            $subdomain = $segments[0]; // Get the subdomain part
+            
+            $isSubdomain = true;
+            Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
+        }
+
         $success = false;
     
-        if ($isSubdomain) {
-            // Tenant login
-            $subdomain = $parts[0];
+        if ($isSubdomain) { 
+            
+            
             $store = Store::where('slug', $subdomain)->first();
             
             if (!$store) {

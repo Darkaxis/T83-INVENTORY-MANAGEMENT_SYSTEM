@@ -142,11 +142,36 @@
                                         </div>
                                     </div>
                                 </div>
+
+                                <div class="mb-3">
+                                    <label for="pricing_tier_id" class="form-label">Select a Plan</label>
+                                    <select id="pricing_tier_id" name="pricing_tier_id" class="form-select">
+                                        @foreach(\App\Models\PricingTier::where('is_active', true)->orderBy('sort_order')->get() as $tier)
+                                        <option value="{{ $tier->id }}" {{ old('pricing_tier_id') == $tier->id ? 'selected' : '' }}>
+                                            {{ $tier->name }} - ${{ $tier->monthly_price }}/mo
+                                        </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label">Billing Cycle</label>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="billing_cycle" id="billing_monthly" value="monthly" checked>
+                                        <label class="form-check-label" for="billing_monthly">
+                                            Monthly
+                                        </label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="billing_cycle" id="billing_annual" value="annual">
+                                        <label class="form-check-label" for="billing_annual">
+                                            Annual (Save up to 17%)
+                                        </label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                       
-                        
                         <div class="row mt-4">
                             <div class="col-md-12 text-end">
                                 <button type="submit" class="btn bg-gradient-primary">Submit Store Request</button>

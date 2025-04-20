@@ -11,34 +11,87 @@
   <div class="collapse navbar-collapse w-auto" id="sidenav-collapse-main">
     <ul class="navbar-nav">
       
-      <!-- Admin menu items -->
-     
-      <li class="nav-item">
-        <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" href="{{ route('dashboard') }}">
-          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            <i class="fas fa-tachometer-alt text-dark"></i>
-          </div>
-          <span class="nav-link-text ms-1">Dashboard</span>
-        </a>
-      </li>
+      @php
+        // Check if we're on a subdomain or main domain
+        $host = request()->getHost();
+        $subdomain = null;
+        $isSubdomain = false;
+        $segments = explode('.', $host);
+        if (count($segments) === 3 && $segments[1] === 'inventory' && $segments[0]) {
+            $subdomain = $segments[0]; // Get the subdomain part
+            
+            $isSubdomain = true;
+            Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
+        }
+        
+        // Get current store if on subdomain
+        $currentStore = null;
+        if($isSubdomain) {
       
-      <li class="nav-item">
-        <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('stores.*') ? 'active bg-light' : '' }}" href="{{ route('stores.index') }}">
-          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            <i class="fas fa-store text-dark"></i>
-          </div>
-          <span class="nav-link-text ms-1">Stores</span>
-        </a>
-      </li>
-    
-      <li class="nav-item">
-        <a class="nav-link text-dark font-weight-bold" href="#">
-          <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-            <i class="fas fa-cogs text-dark"></i>
-          </div>
-          <span class="nav-link-text ms-1">Settings</span>
-        </a>
-      </li>
+            $currentStore = \App\Models\Store::where('slug', $subdomain)->first();
+        }
+      @endphp
+      
+      @if(!$isSubdomain)
+        <!-- Admin menu items (main domain) -->
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" href="{{ route('dashboard') }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-tachometer-alt text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Dashboard</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('stores.*') ? 'active bg-light' : '' }}" href="{{ route('stores.index') }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-store text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Stores</span>
+          </a>
+        </li>
+      
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold" href="#">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-cogs text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Settings</span>
+          </a>
+        </li>
+      @else
+        <!-- Tenant menu items (subdomain) -->
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('products.*') ? 'active bg-light' : '' }}" 
+             href="{{ route('products.index', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-box text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Products</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          {{-- <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('users.*') ? 'active bg-light' : '' }}"
+             href="{{ route('users.index', ['subdomain' => $parts[0]]) }}"> --}}
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-users text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Users</span>
+          </a>
+        </li>
+        
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('subscription.*') ? 'active bg-light' : '' }}"
+             href="/{{ $subdomain}}/subscription">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-credit-card text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Subscription</span>
+          </a>
+        </li>
+      @endif
   
     </ul>
   </div>

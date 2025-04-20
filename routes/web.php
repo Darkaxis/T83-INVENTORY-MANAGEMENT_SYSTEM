@@ -17,6 +17,8 @@ use App\Http\Middleware\EnsureTenantSession;
 use App\Http\Middleware\MultiGuardAuth;
 use App\Http\Controllers\Admin\TenantSettingsController;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\Admin\PricingTierController;
 
 /**
  * Public Routes (No Auth Required)
@@ -29,7 +31,7 @@ Route::middleware(['web'])->group(function () {
     
         $segments = explode('.', $host);
         
-        // FIXED SUBDOMAIN DETECTION FOR VALET
+       
         $subdomain = null;
 
         
@@ -84,7 +86,7 @@ Route::middleware(['web'])->group(function () {
 Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
-    
+    Route::resource('pricing-tiers', PricingTierController::class);
     // Tenant settings
     Route::get('/settings/tenant', [TenantSettingsController::class, 'index'])->name('admin.settings.tenant');
     Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
@@ -98,7 +100,8 @@ Route::middleware(['web', 'auth.multi'])->group(function () {
     Route::resource('stores', StoreController::class);
     Route::post('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.toggleStatus');
     Route::post('/stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
-    
+        
+    Route::post('/stores/{store}/pricing-tier', [StoreController::class, 'updatePricingTier'])->name('stores.updatePricingTier');
     // Store staff management
     Route::prefix('stores/{store}')->group(function () {
         Route::get('/staff', [StoreStaffController::class, 'index'])->name('admin.stores.staff.index');
@@ -133,7 +136,8 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 't
         Route::put('/{product_id}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product_id}', [ProductController::class, 'destroy'])->name('destroy');
     });
-        
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('tenant.subscription');
+    Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('tenant.subscription.upgrade');
     // Add this to routes/web.php inside the subdomain route group
     Route::get('/login-debug', function (Request $request, $subdomain) {
         return [
@@ -158,6 +162,13 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 't
  * Debug/Testing Routes
  * Remove these in production
  */
+Route::domain('{subdomain}.inventory.test')->group(function () {
+    // Existing routes...
+    
+    // Add this new route
+    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+});
+
 Route::domain('{subdomain}.inventory.test')->middleware(['web'])->group(function () {
     // CSRF test form
     
@@ -274,5 +285,16 @@ Route::get('/session-debug', function() {
         'is_started' => session()->isStarted(),
         'session_files_count' => count($sessionFiles),
         'recent_session_files' => array_slice($sessionFiles, -5),
+    ];
+});
+
+Route::get('/test-update-pricing/{storeId}/{tierId}', function($storeId, $tierId) {
+    $store = \App\Models\Store::find($storeId);
+    $result = DB::statement("UPDATE stores SET pricing_tier_id = ? WHERE id = ?", [$tierId, $storeId]);
+    
+    return [
+        'success' => $result,
+        'store' => \App\Models\Store::find($storeId),
+        'pricing_tier' => \App\Models\PricingTier::find($tierId)
     ];
 });

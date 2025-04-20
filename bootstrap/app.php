@@ -55,6 +55,8 @@ return Application::configure(basePath: dirname(__DIR__))
         CreateTenantDatabases::class,
         TenantMigrate::class,
         \App\Console\Commands\TestGmail::class,
+        \App\Console\Commands\SeedTenantProducts::class,
+        \App\Console\Commands\SetupDemoStore::class,
       
     ])
     ->withExceptions(function (Exceptions $exceptions) {

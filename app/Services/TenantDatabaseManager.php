@@ -126,7 +126,7 @@ class TenantDatabaseManager
             $table->string('sku')->unique()->nullable();
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2)->default(0);
-            $table->integer('quantity')->default(0);
+            $table->integer('stock')->default(0);
             $table->unsignedBigInteger('category_id')->nullable();
             $table->timestamps();
         });
@@ -207,5 +207,39 @@ class TenantDatabaseManager
             throw $e;
         }
         
+    }
+
+    /**
+     * Count records from a tenant's table
+     *
+     * @param \App\Models\Store $store
+     * @param string $tableName
+     * @return int
+     */
+    public function countTenantRecords(Store $store, string $tableName): int
+    {
+        try {
+            // Switch to tenant database
+            $this->switchToTenant($store);
+            
+            // Count records
+            $count = DB::connection('tenant')->table($tableName)->count();
+            
+            // Switch back to main
+            $this->switchToMain();
+            
+            return $count;
+        } catch (\Exception $e) {
+            // Make sure we switch back to main db even if there's an error
+            $this->switchToMain();
+            
+            Log::error("Error counting records in tenant database", [
+                'store' => $store->slug,
+                'table' => $tableName,
+                'error' => $e->getMessage()
+            ]);
+            
+            return 0; // Return 0 if error
+        }
     }
 }

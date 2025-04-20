@@ -49,10 +49,10 @@
               <ul class="list-group">
                 <li class="list-group-item border-0 ps-0 pt-0 text-sm"><strong>Store Name:</strong> {{ $store->name }}</li>
                 <li class="list-group-item border-0 ps-0 text-sm"><strong>Subdomain:</strong> 
-                  <a href="http://{{ $store->slug }}.localhost" target="_blank">{{ $store->slug }}.localhost</a>
+                  <a href="http://{{ $store->slug }}.localhost" target="_blank">{{ $store->slug }}.inventory.test<a>
                 </li>
                 <li class="list-group-item border-0 ps-0 text-sm"><strong>Admin URL:</strong> 
-                  <a href="http://{{ $store->slug }}.localhost/admin" target="_blank">{{ $store->slug }}.localhost/admin</a>
+                  <a href="http://{{ $store->slug }}.localhost/admin" target="_blank">{{ $store->slug }}.inventory.test/admin</a>
                 </li>
               </ul>
             </div>
