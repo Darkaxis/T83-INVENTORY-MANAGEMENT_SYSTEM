@@ -2,6 +2,8 @@
 <html lang="en">
 
 <head>
+
+  
   <meta charset="utf-8" />
 
   
@@ -10,6 +12,7 @@
   <meta name="csrf-token" content="{{ csrf_token() }}">
   <link rel="apple-touch-icon" sizes="76x76" href="{{ asset('assets/img/apple-icon.png') }}">
   @if(isset($store))
+   
     <link rel="icon" href="{{ route('store.favicon', ['store' => $store->id]) }}">
   @else
     <link rel="icon" type="image/png" href="{{ asset('assets/img/favicon.png') }}">
@@ -44,6 +47,7 @@
       $isSubdomain = count($segments) === 3 && $segments[1] === 'inventory';
       
       if ($isSubdomain) {
+        
           $subdomain = $segments[0];
           $store = \App\Models\Store::where('slug', $subdomain)->first();
           

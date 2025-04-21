@@ -81,7 +81,7 @@ class Store extends Model
 
     public function owner()
     {
-        return $this->storeUsers()->wherePivot('role', 'owner')->first();
+        return $this->storeUsers()->wherePivot('role', 'manager')->first();
     }
     public function storeUsers()
     {

@@ -122,7 +122,7 @@
                   </div>
                 </div>
                 
-                @hasrole('super_admin')
+               
                 <div class="col-md-6">
                   <div class="form-group my-3">
                     <label for="approved" class="ms-0">Approval Status</label>
@@ -143,7 +143,7 @@
                     </small>
                   </div>
                 </div>
-                @endhasrole
+                
               </div>
               
               @if(!$store->approved)
@@ -156,14 +156,14 @@
                       <h4 class="alert-heading">Pending Approval</h4>
                       <p>This store needs admin approval before a database can be created.</p>
                       
-                      @hasrole('super_admin')
+                    
                       <form action="{{ route('stores.approve', $store) }}" method="POST" class="d-inline">
                         @csrf
                         <button type="submit" class="btn btn-sm btn-warning">
                           <i class="fas fa-check me-1"></i> Approve & Create Database
                         </button>
                       </form>
-                      @endhasrole
+                    
                     </div>
                   </div>
                 </div>
@@ -273,7 +273,7 @@
         </div>
         <div class="card-footer p-3">
           @if(!$store->approved)
-            @hasrole('super_admin')
+           
             <form action="{{ route('stores.approve', $store) }}" method="POST">
               @csrf
               <button type="submit" class="btn btn-sm btn-warning w-100">

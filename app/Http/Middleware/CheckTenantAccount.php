@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Log;
 
 use function Laravel\Prompts\error;
 
-class MultiGuardAuth
+class CheckTenantAccount
 {
     /**
      * Handle an incoming request.
@@ -21,20 +21,13 @@ class MultiGuardAuth
              
 public function handle($request, Closure $next)
 {
-    // Use the same approach that works in your test
-    $isTenant = session('is_tenant', false);
-    $isAdmin = session('is_admin', false);
-    
-    Log::debug('Auth check in middleware', [
-        'path' => $request->path(),
-        'is_tenant' => $isTenant,
-        'is_admin' => $isAdmin,
-        'session_id' => session()->getId()
-    ]);
-
-    
-    
-    if ($isTenant || $isAdmin) {
+   
+    $isTenant = session('is_tenant', false);   
+    $isAdmin = session('is_admin', false); 
+    if ($isAdmin && $isTenant) {
+       return redirect('/');
+    }
+    if ($isTenant ) {
         return $next($request);
     }
     

@@ -42,6 +42,7 @@ class LoginController extends Controller
     {
         $this->middleware('guest')->except('logout');
         $this->databaseManager = $databaseManager;
+        
     }
 
     /**
@@ -62,6 +63,9 @@ class LoginController extends Controller
      */
         public function login(Request $request)
     {
+        //wipe session data
+    
+        session()->flush();
         $this->validateLogin($request);
     
         // Debug the login attempt
@@ -114,7 +118,11 @@ class LoginController extends Controller
             
             if ($isSubdomain) {
                 $user = $this->guard('tenant')->user();
-                
+                if (!$user->is_active) {
+                    return back()->withErrors([
+                        'email' => 'Your account has been deactivated. Please contact your manager.',
+                    ]);
+                }
                 // Set session variables
                 $request->session()->put([
                     'is_tenant' => true,
@@ -135,7 +143,7 @@ class LoginController extends Controller
                 ]);
                 
                 // Return redirect directly instead of using sendLoginResponse
-                return redirect()->intended('/products');
+                return redirect('/products');
             } else {
                 // Similar approach for admin login
                 $user = $this->guard('admin')->user();
@@ -172,7 +180,9 @@ class LoginController extends Controller
                 Log::info('Admin login successful', [
                     'email' => $user->email,
                     'id' => $user->id
+                    
                 ]);
+                
             } else {
                 Log::warning('Admin login failed', [
                     'email' => $request->email,

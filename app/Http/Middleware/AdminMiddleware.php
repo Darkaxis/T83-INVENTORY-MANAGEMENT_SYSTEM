@@ -1,10 +1,13 @@
 <?php
+// filepath: d:\WST\inventory-management-system\app\Http\Middleware\MultiGuardAuth.php
 
 namespace App\Http\Middleware;
 
 use Closure;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
+
+use function Laravel\Prompts\error;
 
 class AdminMiddleware
 {
@@ -15,14 +18,18 @@ class AdminMiddleware
      * @param  \Closure  $next
      * @return mixed
      */
-    public function handle(Request $request, Closure $next)
-    {
-        if (Auth::check() && Auth::user()->role === 'admin') {
-            return $next($request);
-        }
-        return redirect('/')
-            ->with('error', 'You do not have admin access.');
-
+             
+public function handle($request, Closure $next)
+{
+    
+    $isAdmin = session('is_admin', false);
         
+   
+    if ($isAdmin) {
+        return $next($request);
     }
+   
+    return redirect('/')
+        ->with('error', 'You do not have admin access.');
+}
 }

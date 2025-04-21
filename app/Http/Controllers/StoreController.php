@@ -278,7 +278,7 @@ public function approve(Request $request, Store $store)
         \App\Models\StoreUser::create([
             'store_id' => $store->id,
             'user_id' => $user->id,
-            'role' => 'owner',
+            'role' => 'manager',
             'access_level' => 'full',
             'store_password' => bcrypt($storePassword), // Store unique password for this store
         ]);
@@ -293,7 +293,7 @@ public function approve(Request $request, Store $store)
                 'name' => $user->name,
                 'email' => $user->email,
                 'password' => bcrypt($storePassword), // Use store-specific password
-                'role' => 'owner',
+                'role' => 'manager',
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);

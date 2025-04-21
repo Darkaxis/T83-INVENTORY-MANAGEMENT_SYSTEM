@@ -135,9 +135,9 @@
                     <span class="badge badge-sm bg-gradient-{{ ($store->status ?? 'inactive') === 'active' ? 'success' : 'secondary' }}">{{ $store->status ?? 'inactive' }}</span>
                   </td>
                   <td class="align-middle">
-                    <a href="{{ route('stores.edit', $store) }}" class="text-secondary font-weight-bold text-xs me-2">
+                    {{-- <a href="{{ route('stores.edit', $store) }}" class="text-secondary font-weight-bold text-xs me-2">
                       Edit
-                    </a>
+                    </a> --}}
                     <a href="http://{{ $store->slug }}.localhost/admin" target="_blank" class="text-info font-weight-bold text-xs">
                       Access
                     </a>

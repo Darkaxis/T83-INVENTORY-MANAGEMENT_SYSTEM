@@ -10,12 +10,8 @@ use App\Http\Controllers\StoreStaffController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\ProfileController;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Services\TenantDatabaseManager;
-use App\Http\Middleware\EnsureTenantSession;
-use App\Http\Middleware\MultiGuardAuth;
 use App\Http\Controllers\Admin\TenantSettingsController;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\SubscriptionController;
@@ -42,7 +38,7 @@ Route::middleware(['web'])->group(function () {
         Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
 
         
-            $store = \App\Models\Store::where('slug', $subdomain)->first();
+            $store = Store::where('slug', $subdomain)->first();
             
             if (!$store) {
                 abort(404, 'Store not found');
@@ -87,22 +83,19 @@ Route::middleware(['web'])->group(function () {
  */
 Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
     // Dashboard
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+  
     Route::resource('pricing-tiers', PricingTierController::class);
     // Tenant settings
     Route::get('/settings/tenant', [TenantSettingsController::class, 'index'])->name('admin.settings.tenant');
     Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
 });
 
-/**
- * Store Management Routes (Admin Panel)
- */
-Route::middleware(['web', 'auth.multi'])->group(function () {
-    // Store resource
+
+Route::middleware(['web', 'admin'])->group(function () {
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::resource('stores', StoreController::class);
     Route::post('/stores/{store}/status', [StoreController::class, 'status'])->name('stores.toggleStatus');
     Route::post('/stores/{store}/approve', [StoreController::class, 'approve'])->name('stores.approve');
-        
     Route::post('/stores/{store}/pricing-tier', [StoreController::class, 'updatePricingTier'])->name('stores.updatePricingTier');
     // Store staff management
     Route::prefix('stores/{store}')->group(function () {
@@ -120,8 +113,7 @@ Route::middleware(['web', 'auth.multi'])->group(function () {
         Route::get('/products', [StoreProductController::class, 'adminIndex'])->name('admin.stores.products.index');
     });
     
-    // Alternative dashboard route
-    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+   
 });
 
 
@@ -149,7 +141,7 @@ Route::get('/logo/{store}', function (Store $store) {
     return response()->file(public_path('assets/img/default-logo.png'));
 })->name('store.logo');
 
-Route::domain('{subdomain}.inventory.test')->middleware(['web','auth.multi' , 'tenant'])->group(function () {
+Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 'tenant'])->group(function () {
     // Product management
     Route::prefix('/products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');

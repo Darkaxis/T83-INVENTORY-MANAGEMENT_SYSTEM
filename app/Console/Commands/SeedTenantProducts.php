@@ -221,7 +221,7 @@ class SeedTenantProducts extends Command
         $faker = \Faker\Factory::create();
         
         // Always ensure we have an owner if there are none
-        $hasOwner = DB::connection('tenant')->table('users')->where('role', 'owner')->exists();
+        $hasOwner = DB::connection('tenant')->table('users')->where('role', 'manager')->exists();
         
         if (!$hasOwner) {
             $this->info("Creating store owner account...");
@@ -229,7 +229,7 @@ class SeedTenantProducts extends Command
                 'name' => 'Store Owner',
                 'email' => 'owner@' . $store->slug . '.example.com',
                 'password' => Hash::make('password'),
-                'role' => 'owner',
+                'role' => 'manager',
                 'email_verified_at' => now(),
                 'created_at' => now(),
                 'updated_at' => now()

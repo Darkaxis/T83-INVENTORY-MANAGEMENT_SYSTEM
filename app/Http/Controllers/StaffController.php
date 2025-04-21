@@ -19,7 +19,7 @@ class StaffController extends Controller
     public function __construct(TenantDatabaseManager $databaseManager)
     {
         $this->databaseManager = $databaseManager;
-        $this->middleware('auth.multi');
+       
         $this->middleware('tenant.manager');
     }
     
@@ -48,7 +48,7 @@ class StaffController extends Controller
         try {
             // Get staff with pagination
             $staff = DB::connection('tenant')->table('users')
-                ->select('id', 'name', 'email', 'role', 'created_at')
+                ->select('id', 'name', 'email', 'role', 'is_active', 'created_at')
                 ->orderBy('created_at', 'desc')
                 ->paginate(10);
                 
@@ -332,6 +332,63 @@ class StaffController extends Controller
             
             return redirect()->route('staff.index', ['subdomain' => $store->slug])
                 ->with('error', 'Error deleting staff member. Please try again.');
+        }
+    }
+
+    /**
+     * Toggle active status for a staff member.
+     */
+    public function toggleStatus(Request $request, $subdomain, $staff_id)
+    {
+        $store = $this->getCurrentStore($request);
+        
+        // Switch to tenant database
+        $this->databaseManager->switchToTenant($store);
+        
+        try {
+            $staff = DB::connection('tenant')->table('users')->find($staff_id);
+            
+            if (!$staff) {
+                $this->databaseManager->switchToMain();
+                return redirect()->route('staff.index', ['subdomain' => $store->slug])
+                    ->with('error', 'Staff member not found.');
+            }
+            
+            // Prevent deactivating the last active manager
+            if ($staff->role === 'manager' && !$staff->is_active) {
+                $activeManagerCount = DB::connection('tenant')->table('users')
+                    ->where('role', 'manager')
+                    ->where('is_active', true)
+                    ->count();
+                    
+                if ($activeManagerCount <= 1) {
+                    $this->databaseManager->switchToMain();
+                    return redirect()->route('staff.index', ['subdomain' => $store->slug])
+                        ->with('error', 'Cannot deactivate the last active manager.');
+                }
+            }
+            
+            // Toggle status
+            $newStatus = !$staff->is_active;
+            
+            DB::connection('tenant')->table('users')
+                ->where('id', $staff_id)
+                ->update([
+                    'is_active' => $newStatus,
+                    'updated_at' => now(),
+                ]);
+            
+            $this->databaseManager->switchToMain();
+            
+            $statusText = $newStatus ? 'activated' : 'deactivated';
+            return redirect()->route('staff.index', ['subdomain' => $store->slug])
+                ->with('success', "Staff member {$statusText} successfully.");
+        } catch (\Exception $e) {
+            Log::error("Error toggling staff status", ['error' => $e->getMessage()]);
+            $this->databaseManager->switchToMain();
+            
+            return redirect()->route('staff.index', ['subdomain' => $store->slug])
+                ->with('error', 'Error changing staff status. Please try again.');
         }
     }
 }

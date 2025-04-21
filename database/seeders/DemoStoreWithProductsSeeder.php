@@ -54,7 +54,7 @@ class DemoStoreWithProductsSeeder extends Seeder
                 'name' => 'Demo Store Owner',
                 'password' => Hash::make('password'),
                 'store_id' => $store->id,
-                'role' => 'owner',
+                'role' => 'manager',
                 'email_verified_at' => now()
             ]
         );

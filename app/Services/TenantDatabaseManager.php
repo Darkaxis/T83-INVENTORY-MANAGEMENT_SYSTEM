@@ -83,6 +83,7 @@ class TenantDatabaseManager
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->string('role')->default('user');
+            $table->boolean('is_active')->default(true);
             $table->rememberToken();
             $table->timestamps();
         });
@@ -146,7 +147,7 @@ class TenantDatabaseManager
     {
         // Seed default roles
         DB::connection('tenant')->table('roles')->insert([
-            ['name' => 'owner', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'manager', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'manager', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
             ['name' => 'staff', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()]
         ]);

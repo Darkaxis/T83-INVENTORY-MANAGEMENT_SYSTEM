@@ -29,6 +29,49 @@
             padding: 1.5rem;
             margin-bottom: 3rem;
         }
+        /* Add to your existing styles */
+        .pricing-card {
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .pricing-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .pricing-card .card-header {
+            border-bottom: 2px solid #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .pricing-tiers .badge {
+            font-size: 0.7rem;
+        }
+        
+        .pricing-card h3 {
+            font-weight: 700;
+            margin-bottom: 0;
+        }
+        
+        .pricing-card h3 small {
+            font-weight: 400;
+            opacity: 0.7;
+            font-size: 1rem;
+        }
+        
+        .billing-switch-container {
+            padding: 10px;
+            background-color: #f8f9fa;
+            border-radius: 10px;
+            margin: 0 auto 20px;
+            display: inline-block;
+        }
+        
+        .form-check-input:checked {
+            background-color: #4CAF50;
+            border-color: #4CAF50;
+        }
     </style>
 </head>
 <body>
@@ -142,33 +185,103 @@
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                <div class="mb-3">
-                                    <label for="pricing_tier_id" class="form-label">Select a Plan</label>
-                                    <select id="pricing_tier_id" name="pricing_tier_id" class="form-select">
-                                        @foreach(\App\Models\PricingTier::where('is_active', true)->orderBy('sort_order')->get() as $tier)
-                                        <option value="{{ $tier->id }}" {{ old('pricing_tier_id') == $tier->id ? 'selected' : '' }}>
-                                            {{ $tier->name }} - ₱{{ $tier->monthly_price }}/mo
-                                        </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Billing Cycle</label>
-                                    <div class="form-check">
+                        <div class="card mb-4">
+                            <div class="card-header p-3">
+                                <h5 class="mb-0">Select a Subscription Plan</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="billing-switch-container text-center mb-4">
+                                    <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="billing_cycle" id="billing_monthly" value="monthly" checked>
                                         <label class="form-check-label" for="billing_monthly">
-                                            Monthly
+                                            Monthly Billing
                                         </label>
                                     </div>
-                                    <div class="form-check">
+                                    <div class="form-check form-check-inline">
                                         <input class="form-check-input" type="radio" name="billing_cycle" id="billing_annual" value="annual">
                                         <label class="form-check-label" for="billing_annual">
-                                            Annual (Save up to 17%)
+                                            Annual Billing <span class="badge bg-success">Save up to 17%</span>
                                         </label>
                                     </div>
                                 </div>
+
+                                <div class="row pricing-tiers">
+                                    @foreach(\App\Models\PricingTier::where('is_active', true)->orderBy('sort_order')->get() as $tier)
+                                    <div class="col-md-4 mb-4">
+                                        <div class="card h-100 pricing-card {{ $loop->index == 1 ? 'border border-2 border-primary' : '' }}">
+                                            @if($loop->index == 1)
+                                            <div class="position-absolute top-0 start-50 translate-middle">
+                                                <span class="badge bg-primary">MOST POPULAR</span>
+                                            </div>
+                                            @endif
+                                            <div class="card-header text-center {{ $loop->index == 1 ? 'bg-primary text-white' : '' }}">
+                                                <h5 class="mb-0">{{ $tier->name }}</h5>
+                                            </div>
+                                            <div class="card-body d-flex flex-column">
+                                                <div class="text-center mb-3">
+                                                    <h3 class="monthly-price" {{ old('billing_cycle') == 'annual' ? 'style=display:none' : '' }}>
+                                                        ₱{{ number_format($tier->monthly_price, 2) }}<small>/month</small>
+                                                    </h3>
+                                                    <h3 class="annual-price" {{ old('billing_cycle') != 'annual' ? 'style=display:none' : '' }}>
+                                                        ₱{{ number_format($tier->annual_price/12, 2) }}<small>/month</small>
+                                                        <p class="small text-muted mb-0">Billed as ₱{{ number_format($tier->annual_price, 2) }} yearly</p>
+                                                    </h3>
+                                                </div>
+                                                
+                                                <ul class="list-group list-group-flush flex-grow-1">
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>Products</span>
+                                                        <span class="fw-bold">{{ $tier->product_limit < 0 ? 'Unlimited' : number_format($tier->product_limit) }}</span>
+                                                    </li>
+                                                    <li class="list-group-item d-flex justify-content-between">
+                                                        <span>Staff Members</span>
+                                                        <span class="fw-bold">{{ $tier->user_limit < 0 ? 'Unlimited' : number_format($tier->user_limit) }}</span>
+                                                    </li>
+                                                    
+                                                    @if(is_array($tier->features_json))
+                                                        @foreach($tier->features_json as $feature => $included)
+                                                            @if(is_bool($included) || is_string($included))
+                                                            <li class="list-group-item">
+                                                                <div class="d-flex align-items-center">
+                                                                    @if($included === true || $included === 'true' || $included === 'yes')
+                                                                        <i class="material-icons text-success me-2">check_circle</i>
+                                                                    @elseif($included === false || $included === 'false' || $included === 'no')
+                                                                        <i class="material-icons text-muted me-2">remove_circle_outline</i>
+                                                                    @else
+                                                                        <i class="material-icons text-primary me-2">info</i>
+                                                                    @endif
+                                                                    <span>{{ ucfirst(str_replace('_', ' ', $feature)) }}</span>
+                                                                    
+                                                                    @if(is_string($included) && !in_array($included, ['true', 'false', 'yes', 'no']))
+                                                                        <span class="ms-auto">{{ $included }}</span>
+                                                                    @endif
+                                                                </div>
+                                                            </li>
+                                                            @endif
+                                                        @endforeach
+                                                    @endif
+                                                </ul>
+                                                
+                                                <div class="mt-3 text-center">
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="radio" name="pricing_tier_id" 
+                                                            id="pricing_tier_{{ $tier->id }}" value="{{ $tier->id }}"
+                                                            {{ (old('pricing_tier_id') == $tier->id || ($loop->first && !old('pricing_tier_id'))) ? 'checked' : '' }}>
+                                                        <label class="form-check-label" for="pricing_tier_{{ $tier->id }}">
+                                                            Select {{ $tier->name }}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @endforeach
+                                </div>
+                                
+                                
                             </div>
                         </div>
 
@@ -230,6 +343,32 @@
                     }
                 });
             });
+
+            // Handle billing cycle toggle
+            const monthlyRadio = document.getElementById('billing_monthly');
+            const annualRadio = document.getElementById('billing_annual');
+            const monthlyPrices = document.querySelectorAll('.monthly-price');
+            const annualPrices = document.querySelectorAll('.annual-price');
+            
+            monthlyRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    monthlyPrices.forEach(el => el.style.display = 'block');
+                    annualPrices.forEach(el => el.style.display = 'none');
+                }
+            });
+            
+            annualRadio.addEventListener('change', function() {
+                if (this.checked) {
+                    monthlyPrices.forEach(el => el.style.display = 'none');
+                    annualPrices.forEach(el => el.style.display = 'block');
+                }
+            });
+            
+            // Initialize based on current selection
+            if (annualRadio.checked) {
+                monthlyPrices.forEach(el => el.style.display = 'none');
+                annualPrices.forEach(el => el.style.display = 'block');
+            }
         });
     </script>
 </body>

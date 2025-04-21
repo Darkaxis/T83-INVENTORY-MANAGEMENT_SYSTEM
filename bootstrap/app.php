@@ -24,7 +24,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'store.approval' => \App\Http\Middleware\CheckStoreApprovalMiddleware::class,
             'tenant' => \App\Http\Middleware\EnsureTenantSession::class,
             'tenant.manager' => \App\Http\Middleware\TenantManagerMiddleware::class,
-            'auth.multi' => \App\Http\Middleware\MultiGuardAuth::class,
+            'tenant.check' => \App\Http\Middleware\CheckTenantAccount::class,
     
         ])
         ->validateCsrfTokens(except: [
@@ -36,18 +36,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         ;
         
-        // Register middleware group
-        $middleware->group('admin', [
-            'web',
-            'auth',
-            \App\Http\Middleware\AdminMiddleware::class,
-        ]);
+      
 
         // Add middleware to the web group that checks store approval
         $middleware->web([
             \App\Http\Middleware\CheckStoreApprovalMiddleware::class,
-            \App\Http\Middleware\VerifyCsrfToken::class,
-          
+            \App\Http\Middleware\VerifyCsrfToken::class
 
         ]);
     })
