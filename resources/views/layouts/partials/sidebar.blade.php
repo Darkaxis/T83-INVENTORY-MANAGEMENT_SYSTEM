@@ -4,7 +4,11 @@
     <i class="fas fa-times p-3 cursor-pointer text-dark opacity-5 position-absolute end-0 top-0 d-none d-xl-none" aria-hidden="true" id="iconSidenav"></i>
     <a class="navbar-brand px-4 py-3 m-0" href="{{ route('dashboard') }}">
       
+      @if(isset($store))
       <img src="{{ route('store.logo', $store) }}" alt="{{ $store->name }} logo">
+    
+   @endif
+
       <span class="ms-1 text-sm text-dark">Inventory System</span>
     </a>
   </div>

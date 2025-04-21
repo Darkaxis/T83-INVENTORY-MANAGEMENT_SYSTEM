@@ -85,7 +85,7 @@ Route::middleware(['web'])->group(function () {
 /**
  * Main System Admin Routes
  */
-Route::middleware(['web', 'auth', 'admin'])->prefix('admin')->group(function () {
+Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
     // Dashboard
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
     Route::resource('pricing-tiers', PricingTierController::class);

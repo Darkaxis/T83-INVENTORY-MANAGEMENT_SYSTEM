@@ -13,11 +13,7 @@ class DashboardController extends Controller
 
 {
     //add middleware to check if user is admin
-    public function __construct()
-    {
-        
-        $this->middleware('admin'); // Ensure only admin can access this controller
-    }
+   
     public function index()
     {
 

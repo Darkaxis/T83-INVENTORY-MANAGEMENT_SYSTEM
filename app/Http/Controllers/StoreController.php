@@ -266,7 +266,7 @@ public function approve(Request $request, Store $store)
             ]);
             
             // Assign owner role
-            $user->assignRole('owner');
+            $user->assignRole('manager');
             
             Log::info("Created new user for store owner", [
                 'store_id' => $store->id,
@@ -308,7 +308,7 @@ public function approve(Request $request, Store $store)
             if ($tenantUserId) {
                 $roleId = \Illuminate\Support\Facades\DB::connection('tenant')
                     ->table('roles')
-                    ->where('name', 'owner')
+                    ->where('name', 'manager')
                     ->value('id');
                     
                 if ($roleId) {
