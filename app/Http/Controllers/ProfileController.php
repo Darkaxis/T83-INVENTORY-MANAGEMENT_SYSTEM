@@ -18,7 +18,7 @@ class ProfileController extends Controller
     public function __construct(TenantDatabaseManager $databaseManager)
     {
         $this->databaseManager = $databaseManager;
-        $this->middleware('auth.multi');
+        $this->middleware('tenant');
     }
     
     /**

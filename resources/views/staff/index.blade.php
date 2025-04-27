@@ -38,6 +38,57 @@
         </div>
     @endif
 
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle p-3 me-3">
+                            <i class="fas fa-users text-primary fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Staff Usage</h6>
+                            <p class="mb-0 text-muted small">
+                                {{ $store->pricingTier->name }} Plan • 
+                                {{ $store->billing_cycle == 'annual' ? 'Annual' : 'Monthly' }} billing
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <span class="h3 mb-0 me-2">{{ $staff->total() }}</span>
+                            <span class="text-muted">/</span>
+                            <span class="h4 mb-0 ms-2">{{ $store->pricingTier->user_limit < 0 ? '∞' : number_format($store->pricingTier->user_limit) }}</span>
+                            <span class="ms-2 text-muted">staff members</span>
+                        </div>
+                        @php
+                            $staffPercentUsed = $store->pricingTier->user_limit > 0 ? 
+                                min(100, round(($staff->total() / $store->pricingTier->user_limit) * 100)) : 0;
+                        @endphp
+                        <div class="progress mt-2" style="height: 8px">
+                            <div class="progress-bar bg-{{ $staffPercentUsed > 90 ? 'danger' : ($staffPercentUsed > 75 ? 'warning' : 'info') }}" 
+                                 role="progressbar" 
+                                 style="width: {{ $staffPercentUsed }}%" 
+                                 aria-valuenow="{{ $staffPercentUsed }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        
+                        @if($staffPercentUsed > 75)
+                            <div class="text-center mt-3">
+                                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-circle-up me-1"></i> Upgrade Plan
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
         <div class="card-header bg-light py-3">
             <div class="row align-items-center">

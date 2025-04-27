@@ -4,7 +4,7 @@
 @section('content')
 <div class="container py-4">
     @php
-        // Define this variable early before it's used
+        
         $canAddProducts = $store->canAddProducts();
     @endphp
     
@@ -12,14 +12,14 @@
         <div class="col-md-6">
             <h1 class="display-5 fw-bold text-primary">
                 <i class="fas fa-boxes me-2"></i>Products
-                @if(!$products->isEmpty())
-                    <span class="badge bg-{{ $canAddProducts ? 'success' : 'danger' }} fs-6 ms-2">
-                        {{ $products->total() }}
-                        @if(session('limit_data'))
-                            / {{ session('limit_data.limit') }}
-                        @endif
-                    </span>
-                @endif
+                <span class="badge bg-{{ $canAddProducts ? 'success' : 'danger' }} fs-6 ms-2" 
+                      data-bs-toggle="tooltip" 
+                      title="{{ $store->pricingTier->product_limit < 0 ? 'Unlimited products allowed' : 'Your plan allows '.$store->pricingTier->product_limit.' products' }}">
+                    {{ $products->total() }}
+                    @if($store->pricingTier->product_limit > 0)
+                        / {{ number_format($store->pricingTier->product_limit) }}
+                    @endif
+                </span>
             </h1>
             <p class="text-muted">Manage your inventory items</p>
         </div>
@@ -73,6 +73,57 @@
             </div>
         </div>
     @endif
+
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle p-3 me-3">
+                            <i class="fas fa-boxes text-primary fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Product Usage</h6>
+                            <p class="mb-0 text-muted small">
+                                {{ $store->pricingTier->name }} Plan • 
+                                {{ $store->billing_cycle == 'annual' ? 'Annual' : 'Monthly' }} billing
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <span class="h3 mb-0 me-2">{{ $products->total() }}</span>
+                            <span class="text-muted">/</span>
+                            <span class="h4 mb-0 ms-2">{{ $store->pricingTier->product_limit < 0 ? '∞' : number_format($store->pricingTier->product_limit) }}</span>
+                            <span class="ms-2 text-muted">products</span>
+                        </div>
+                        @php 
+                            $percentUsed = $store->pricingTier->product_limit > 0 ? 
+                                min(100, round(($products->total() / $store->pricingTier->product_limit) * 100)) : 0;
+                        @endphp
+                        <div class="progress mt-2" style="height: 8px">
+                            <div class="progress-bar bg-{{ $percentUsed > 90 ? 'danger' : ($percentUsed > 75 ? 'warning' : 'success') }}" 
+                                 role="progressbar" 
+                                 style="width: {{ $percentUsed }}%" 
+                                 aria-valuenow="{{ $percentUsed }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        
+                        @if($percentUsed > 75)
+                            <div class="text-center mt-3">
+                                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-circle-up me-1"></i> Upgrade Plan
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
     
     <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
         <div class="card-header bg-light py-3">
