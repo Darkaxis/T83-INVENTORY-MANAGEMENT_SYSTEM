@@ -4,6 +4,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\StoreController;
+use App\Http\Controllers\TenantDashboardController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\StoreProductController;
 use App\Http\Controllers\StoreStaffController;
@@ -146,6 +147,7 @@ Route::get('/logo/{store}', function (Store $store) {
 
 Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 'tenant'])->group(function () {
     // Product management
+    Route::get('/tenantdashboard', [TenantDashboardController::class, 'index'])->name('tenant.dashboard');
     Route::prefix('/products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
