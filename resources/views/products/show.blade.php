@@ -70,12 +70,10 @@
         </div>
         <div class="card-body">
           <div class="d-grid gap-2">
-            <!-- Use absolute URL instead of route helper to avoid parameter issues -->
-            <a href="/products/{{ $product->id }}/edit" class="btn btn-info">
+            <a href="{{ route('products.edit', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" class="btn btn-info">
               <i class="fas fa-edit me-2"></i> Edit Product
             </a>
-            <!-- Use absolute URL for form action -->
-            <form action="/products/{{ $product->id }}" method="POST" style="display:inline;">
+            <form action="{{ route('products.destroy', ['subdomain' => $store->slug, 'product_id' => $product->id]) }}" method="POST" style="display:inline;">
               @csrf
               @method('DELETE')
               <button type="submit" class="btn btn-danger w-100">

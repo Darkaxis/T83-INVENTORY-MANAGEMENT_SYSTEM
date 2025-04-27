@@ -68,7 +68,20 @@
       @else
 
         <!-- Tenant menu items (subdomain) -->
-        
+        @php
+            // Get subscription tier of the current store
+            $tierLevel = 'free'; // Default to free
+            if ($currentStore && $currentStore->pricingTier) {
+                $tierName = strtolower($currentStore->pricingTier->name ?? '');
+                if (str_contains($tierName, 'pro') || str_contains($tierName, 'premium') || str_contains($tierName, 'business')) {
+                    $tierLevel = 'pro';
+                } elseif (str_contains($tierName, 'starter') || str_contains($tierName, 'basic')) {
+                    $tierLevel = 'starter';
+                }
+            }
+        @endphp
+
+        <!-- Products - Available to all tiers -->
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('products.*') ? 'active bg-light' : '' }}" 
              href="{{ route('products.index', ['subdomain' => $subdomain]) }}">
@@ -78,12 +91,50 @@
             <span class="nav-link-text ms-1">Products</span>
           </a>
         </li>
-        
+
+        <!-- Checkout - Available to all tiers -->
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('checkout.*') && !request()->routeIs('checkout.history') ? 'active bg-light' : '' }}" 
+             href="{{ route('checkout.index', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-cash-register text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Checkout</span>
+          </a>
+        </li>
+
+        <!-- History - Available to Starter & Pro tiers -->
+        @if($tierLevel == 'starter' || $tierLevel == 'pro')
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('checkout.history') ? 'active bg-light' : '' }}" 
+             href="{{ route('checkout.history', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-receipt text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Sales History</span>
+          </a>
+        </li>
+        @endif
+
+        <!-- Reports - Available to Pro tier only -->
+        @if($tierLevel == 'pro')
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('reports.*') ? 'active bg-light' : '' }}" 
+             href="{{ route('reports.index', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-chart-bar text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Reports</span>
+          </a>
+        </li>
+        @endif
+
         @php
             // Check if current user is a manager
             $isManager = session('tenant_user_role') === 'manager';
         @endphp
 
+        <!-- User management - Only for managers -->
         @if($isManager)
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('staff.*') ? 'active bg-light' : '' }}"
@@ -94,6 +145,9 @@
             <span class="nav-link-text ms-1">Users</span>
           </a>
         </li>
+
+        <!-- Settings - Only for managers and if tier is Starter or Pro -->
+        @if($tierLevel == 'starter' || $tierLevel == 'pro')
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('settings.*') ? 'active bg-light' : '' }}"
              href="{{ route('settings.index', ['subdomain' => $subdomain]) }}">
@@ -104,7 +158,9 @@
           </a>
         </li>
         @endif
-        
+        @endif
+
+        <!-- Subscription - Always show to allow upgrades -->
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('subscription.*') ? 'active bg-light' : '' }}"
              href="/{{ $subdomain}}/subscription">
@@ -114,16 +170,17 @@
             <span class="nav-link-text ms-1">Subscription</span>
           </a>
         </li>
+
+        <!-- User profile -->
         <li class="nav-item">
-          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('profile') ? 'active bg-light' : '' }}" 
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('profile.*') ? 'active bg-light' : '' }}" 
              href="{{ route('profile.password', ['subdomain' => $subdomain]) }}">
             <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-              <i class="fas fa-box text-dark"></i>
+              <i class="fas fa-user text-dark"></i>
             </div>
-            <span class="nav-link-text ms-1">Profle</span>
+            <span class="nav-link-text ms-1">Profile</span>
           </a>
         </li>
-        
         
       @endif
 

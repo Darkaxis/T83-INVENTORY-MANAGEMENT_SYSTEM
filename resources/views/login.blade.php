@@ -155,11 +155,7 @@
                   <a href="{{ route('login.google') }}" class="btn btn-outline-danger w-100 mb-2">
                     <i class="fa fa-google me-2"></i> Sign in with Google
                   </a>
-                  @endif
-                </form>
-                
-                                <!-- Add this to your homepage view -->
-                <div class="container mt-5">
+                  <div class="container mt-5">
                     <div class="card">
                         <div class="card-body text-center">
                             <h3>Need Your Own Store?</h3>
@@ -172,6 +168,13 @@
                         </div>
                     </div>
                 </div>
+
+
+                  @endif
+                </form>
+                
+                                <!-- Add this to your homepage view -->
+                
               </div>
             </div>
           </div>

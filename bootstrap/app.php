@@ -25,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'tenant' => \App\Http\Middleware\EnsureTenantSession::class,
             'tenant.manager' => \App\Http\Middleware\TenantManagerMiddleware::class,
             'tenant.check' => \App\Http\Middleware\CheckTenantAccount::class,
+            'subscription.tier' => \App\Http\Middleware\CheckSubscriptionTier::class,
     
         ])
         ->validateCsrfTokens(except: [

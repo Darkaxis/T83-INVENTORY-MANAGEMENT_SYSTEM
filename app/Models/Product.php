@@ -8,7 +8,11 @@ class Product extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'price','sku' ,'stock', 'store_id'];
+    protected $fillable = ['name', 'price','sku' ,'stock', 'store_id', 'sold_count'];
+
+    protected $casts = [
+        'sold_count' => 'integer',
+    ];
 
     /**
      * Get the store that owns the product.

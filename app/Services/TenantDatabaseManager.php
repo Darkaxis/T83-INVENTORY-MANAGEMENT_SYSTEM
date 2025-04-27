@@ -120,15 +120,19 @@ class TenantDatabaseManager
             $table->primary(['role_id', 'model_id', 'model_type']);
         });
         
-        // Create products table
+        // Create products table with additional fields for checkout
         Schema::connection('tenant')->create('products', function (Blueprint $table) {
             $table->id();
             $table->string('name');
             $table->string('sku')->unique()->nullable();
+            $table->string('barcode')->nullable()->index();
             $table->text('description')->nullable();
             $table->decimal('price', 10, 2)->default(0);
-            $table->integer('stock')->default(0);
+            $table->integer('stock')->default(0); // Changed from stock to stock
+            $table->integer('sold_count')->default(0); // Track sales
+          
             $table->unsignedBigInteger('category_id')->nullable();
+            $table->boolean('status')->default(true);
             $table->timestamps();
         });
         
@@ -136,7 +140,59 @@ class TenantDatabaseManager
         Schema::connection('tenant')->create('categories', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            $table->string('slug');
             $table->text('description')->nullable();
+            $table->unsignedBigInteger('parent_id')->nullable();
+           
+            $table->boolean('status')->default(true);
+            $table->integer('sort_order')->default(0);
+            $table->timestamps();
+        });
+        
+        // Create sales table for checkout functionality
+        Schema::connection('tenant')->create('sales', function (Blueprint $table) {
+            $table->id();
+            $table->string('invoice_number')->unique();
+            $table->unsignedBigInteger('user_id'); // cashier who processed the sale
+            $table->decimal('subtotal', 10, 2);
+            $table->decimal('tax_amount', 10, 2);
+            $table->decimal('discount_amount', 10, 2)->default(0);
+            $table->decimal('total_amount', 10, 2);
+            $table->string('payment_method')->default('cash');
+            $table->string('payment_status')->default('completed');
+            $table->string('customer_name')->nullable();
+            $table->string('customer_email')->nullable();
+            $table->string('customer_phone')->nullable();
+            $table->text('notes')->nullable();
+            $table->timestamps();
+        });
+        
+        // Create sale_items table for checkout items
+        Schema::connection('tenant')->create('sale_items', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('sale_id');
+            $table->unsignedBigInteger('product_id');
+            $table->string('product_name');
+            $table->string('product_sku');
+            $table->integer('stock');
+            $table->decimal('unit_price', 10, 2);
+            $table->decimal('line_total', 10, 2);
+            $table->decimal('discount', 10, 2)->default(0);
+            $table->timestamps();
+            
+            $table->foreign('sale_id')->references('id')->on('sales')->onDelete('cascade');
+        });
+        
+        // Create settings table for store settings
+        Schema::connection('tenant')->create('settings', function (Blueprint $table) {
+            $table->id();
+            $table->string('store_name');
+            $table->string('accent_color')->nullable();
+            $table->binary('logo_binary')->nullable();
+            $table->string('logo_mime_type')->nullable();
+            $table->decimal('tax_rate', 5, 2)->default(10.00); // Default 10% tax rate
+            $table->boolean('receipt_show_logo')->default(true);
+            $table->string('receipt_footer_text')->nullable();
             $table->timestamps();
         });
         

@@ -23,7 +23,7 @@ class Category extends Model
         'description',
         'parent_id',
         'store_id',
-        'image',
+     
         'status',
         'sort_order'
     ];

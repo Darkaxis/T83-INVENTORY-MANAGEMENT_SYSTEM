@@ -18,6 +18,9 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Admin\PricingTierController;
 use App\Http\Controllers\StoreSettingsController;
 use App\Models\Store;
+use App\Http\Controllers\CheckoutController;
+use App\Http\Controllers\ReportController;
+
 /**
  * Public Routes (No Auth Required)
  */
@@ -152,6 +155,8 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 
         Route::put('/{product_id}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product_id}', [ProductController::class, 'destroy'])->name('destroy');
     });
+        // Add this with your other product routes
+    Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
     Route::get('/subscription', [SubscriptionController::class, 'index'])->name('tenant.subscription');
     Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('tenant.subscription.upgrade');
     // Add this to routes/web.php inside the subdomain route group
@@ -166,12 +171,43 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 
     Route::delete('/staff/{staff_id}', [StaffController::class, 'destroy'])->name('staff.destroy');
     Route::post('/staff/{staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.reset-password');
         
-    // Add to routes/web.php inside the tenant subdomain group
-    Route::get('/settings', [StoreSettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [StoreSettingsController::class, 'update'])->name('settings.update');
+    // Starter tier routes
+        Route::get('/checkout/history', [CheckoutController::class, 'history'])
+->name('checkout.history')
+->middleware(['auth', 'subscription.tier']);
     // Profile - Password change
     Route::get('/profile/password', [ProfileController::class, 'showChangePasswordForm'])->name('profile.password');
     Route::post('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.update-password');
+    
+    // Checkout routes
+    // Free tier routes (no middleware needed as this is the base access level)
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+
+// Starter tier routes
+Route::get('/checkout/history', [CheckoutController::class, 'history'])
+    ->name('checkout.history')
+    ->middleware([ 'subscription.tier:starter']);
+
+// Manager-only routes that also need starter tier
+Route::group(['middleware' => ['subscription.tier:starter']], function () {
+    Route::get('/settings', [StoreSettingsController::class, 'index'])->name('settings.index');
+    Route::post('/settings', [StoreSettingsController::class, 'update'])->name('settings.update');
+});
+
+// Pro tier routes
+Route::get('/reports', [ReportController::class, 'index'])
+    ->name('reports.index')
+    ->middleware([ 'subscription.tier:pro']);
+
+
+
+        Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
+        Route::get('/checkout/search', [CheckoutController::class, 'searchProducts'])->name('checkout.search');
+        Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
+        Route::get('/checkout/receipt/{sale_id}', [CheckoutController::class, 'receipt'])->name('checkout.receipt');
+        Route::get('/checkout/history', [CheckoutController::class, 'history'])->name('checkout.history');
+   
 });
 
 /**
@@ -314,3 +350,4 @@ Route::get('/test-update-pricing/{storeId}/{tierId}', function($storeId, $tierId
         'pricing_tier' => \App\Models\PricingTier::find($tierId)
     ];
 });
+

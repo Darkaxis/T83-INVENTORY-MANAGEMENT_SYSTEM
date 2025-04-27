@@ -21,7 +21,7 @@ class DashboardController extends Controller
         $storesCount = Store::count();
         $activeStoresCount = Store::where('status', 'active')->count();
         $usersCount = User::count();
-        $productsCount = Product::count();
+       $productsCount = Product::count();
         
         // Get recent stores
         $stores = Store::withCount(['users', 'products'])

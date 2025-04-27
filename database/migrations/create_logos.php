@@ -14,7 +14,8 @@ return new class extends Migration
     public function up()
     {
         Schema::table('stores', function (Blueprint $table) {
-          
+            //add accent color, logo binary and logo mime type to stores table
+            $table->string('accent_color')->nullable()->after('name');
             $table->binary('logo_binary')->nullable()->after('accent_color');
             $table->string('logo_mime_type')->nullable()->after('logo_binary');
         });

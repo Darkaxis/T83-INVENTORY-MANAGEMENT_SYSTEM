@@ -24,7 +24,8 @@ class SeedTenantProducts extends Command
                            {--count=20 : Number of products to seed per store}
                            {--users=5 : Number of users to seed per store}
                            {--with-users : Also seed users for the store}
-                           {--only-users : Only seed users, not products}';
+                           {--only-users : Only seed users, not products}
+                           {--only-products : Only seed products, not users}';
 
     /**
      * The console command description.
@@ -64,6 +65,7 @@ class SeedTenantProducts extends Command
         $userCount = (int)$this->option('users');
         $withUsers = $this->option('with-users') || $this->option('only-users');
         $onlyUsers = $this->option('only-users');
+        $onlyProducts = $this->option('only-products');
         
         // Get stores to seed
         if ($storeOption === 'all') {
@@ -86,13 +88,16 @@ class SeedTenantProducts extends Command
                     continue;
                 }
                 
-                // Seed users if requested
-                if ($withUsers) {
+                // Seed initial tenant data
+                $this->seedTenantData();
+                
+                // Seed users if requested and not only products
+                if ($withUsers && !$onlyProducts) {
                     $this->seedUsersForStore($store, $userCount);
                 }
                 
-                // Seed products if not only-users
-                if (!$onlyUsers) {
+                // Seed products if not only-users or if only-products
+                if (!$onlyUsers || $onlyProducts) {
                     $this->seedProductsForStore($store, $count);
                 }
             } catch (\Exception $e) {
@@ -387,7 +392,10 @@ class SeedTenantProducts extends Command
                 'description' => $faker->paragraph(),
                 'price' => $faker->randomFloat(2, 10, 1000),
                 'stock' => $faker->numberBetween(0, 100),
+                'status' => $faker->boolean(),
                 'category_id' => $defaultCategoryId,
+                'sold_count' => 0,
+                'barcode' => $faker->ean13(),
                 'created_at' => now(),
                 'updated_at' => now()
             ]);
@@ -521,5 +529,46 @@ class SeedTenantProducts extends Command
         }
         
         return $pricingTier->user_limit;
+    }
+    
+    /**
+     * Seed initial tenant data.
+     *
+     * @return void
+     */
+    protected function seedTenantData()
+    {
+        // Seed default roles
+        DB::connection('tenant')->table('roles')->insert([
+            ['name' => 'manager', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()],
+            ['name' => 'staff', 'guard_name' => 'web', 'created_at' => now(), 'updated_at' => now()]
+        ]);
+        
+        // Seed default categories
+        DB::connection('tenant')->table('categories')->insert([
+            [
+                'name' => 'General', 
+                'description' => 'Default category for products', 
+                'status' => true,
+                'sort_order' => 1,
+                'created_at' => now(), 
+                'updated_at' => now()
+            ]
+        ]);
+        
+        // // Seed default settings
+        // DB::connection('tenant')->table('settings')->insert([
+        //     [
+        //         'store_name' => 'My Store',
+        //         'accent_color' => '#4e73df',  // Default blue
+        //         'tax_rate' => 10.00,
+        //         'receipt_show_logo' => true,
+        //         'receipt_footer_text' => 'Thank you for your business!',
+        //         'created_at' => now(),
+        //         'updated_at' => now()
+        //     ]
+        // ]);
+        
+        Log::info("Seeded initial data in tenant database");
     }
 }

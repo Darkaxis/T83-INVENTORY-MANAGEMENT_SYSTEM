@@ -228,78 +228,38 @@ class Store extends Model
     }
 
     /**
-     * Get CSS color variables based on accent color.
-     *
-     * @return array
+     * Get accent color CSS values derived from the main accent color
      */
     public function getAccentColorCss()
     {
-        $colors = [
-            'blue' => [
-                'primary' => '#4e73df',
-                'secondary' => '#2e59d9',
-                'tertiary' => '#2653d4',
-                'highlight' => 'rgba(78, 115, 223, 0.25)',
-            ],
-            'indigo' => [
-                'primary' => '#6610f2',
-                'secondary' => '#520dc2',
-                'tertiary' => '#4d0cb3',
-                'highlight' => 'rgba(102, 16, 242, 0.25)',
-            ],
-            'purple' => [
-                'primary' => '#6f42c1',
-                'secondary' => '#5a359f',
-                'tertiary' => '#533291',
-                'highlight' => 'rgba(111, 66, 193, 0.25)',
-            ],
-            'pink' => [
-                'primary' => '#e83e8c',
-                'secondary' => '#d4317a',
-                'tertiary' => '#c42e72',
-                'highlight' => 'rgba(232, 62, 140, 0.25)',
-            ],
-            'red' => [
-                'primary' => '#e74a3b',
-                'secondary' => '#d13b2e',
-                'tertiary' => '#c0372a',
-                'highlight' => 'rgba(231, 74, 59, 0.25)',
-            ],
-            'orange' => [
-                'primary' => '#fd7e14',
-                'secondary' => '#e96e10',
-                'tertiary' => '#d6630f',
-                'highlight' => 'rgba(253, 126, 20, 0.25)',
-            ],
-            'yellow' => [
-                'primary' => '#f6c23e',
-                'secondary' => '#e9b32d',
-                'tertiary' => '#e0ac29',
-                'highlight' => 'rgba(246, 194, 62, 0.25)',
-            ],
-            'green' => [
-                'primary' => '#1cc88a',
-                'secondary' => '#18a97c',
-                'tertiary' => '#169b72',
-                'highlight' => 'rgba(28, 200, 138, 0.25)',
-            ],
-            'teal' => [
-                'primary' => '#20c9a6',
-                'secondary' => '#1ba393',
-                'tertiary' => '#199688',
-                'highlight' => 'rgba(32, 201, 166, 0.25)',
-            ],
-            'cyan' => [
-                'primary' => '#36b9cc',
-                'secondary' => '#2fa6b9',
-                'tertiary' => '#2a98a9',
-                'highlight' => 'rgba(54, 185, 204, 0.25)',
-            ],
+        // Use store accent color or fallback to default blue
+        $primaryColor = $this->accent_color ?? '#4e73df';
+        
+        // Convert hex to RGB for calculations
+        list($r, $g, $b) = sscanf($primaryColor, "#%02x%02x%02x");
+        
+        // Create slightly darker shade for secondary (darken by 8%)
+        $rDark = max(0, $r - ($r * 0.08));
+        $gDark = max(0, $g - ($g * 0.08));
+        $bDark = max(0, $b - ($b * 0.08));
+        $secondaryColor = sprintf("#%02x%02x%02x", $rDark, $gDark, $bDark);
+        
+        // Create even darker shade for tertiary (darken by 12%)
+        $rDarker = max(0, $r - ($r * 0.12));
+        $gDarker = max(0, $g - ($g * 0.12));
+        $bDarker = max(0, $b - ($b * 0.12));
+        $tertiaryColor = sprintf("#%02x%02x%02x", $rDarker, $gDarker, $bDarker);
+        
+        // Create highlight color (25% opacity of primary)
+        $highlightColor = "rgba($r, $g, $b, 0.25)";
+        
+        return [
+            'primary' => $primaryColor,
+            'secondary' => $secondaryColor,
+            'tertiary' => $tertiaryColor,
+            'highlight' => $highlightColor,
+            'rgb' => "$r,$g,$b"
         ];
-        
-        $colorName = $this->accent_color ?? 'blue';
-        
-        return $colors[$colorName] ?? $colors['blue'];
     }
 
     /**

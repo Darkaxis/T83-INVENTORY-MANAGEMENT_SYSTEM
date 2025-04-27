@@ -77,20 +77,25 @@
                                 <div class="form-group mb-4">
                                     <label for="accent_color" class="form-label fw-bold">Accent Color</label>
                                     <div class="input-group">
-                                        <span class="input-group-text"><i class="fas fa-palette"></i></span>
-                                        <input type="color" id="color_picker" class="form-control form-control-color" 
-                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}" 
-                                               title="Choose your accent color">
-                                        <input type="text" id="color_hex" class="form-control" 
-                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}" 
-                                               pattern="^#[0-9A-Fa-f]{6}$" placeholder="#4e73df">
-                                        <input type="hidden" name="accent_color" id="accent_color" 
-                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}">
+                                        <input type="color" class="form-control form-control-color" id="color_picker" 
+                                               value="{{ $store->accent_color ?? '#4e73df' }}" 
+                                               title="Choose accent color">
+                                        <input type="text" class="form-control" id="accent_color" name="accent_color" 
+                                               value="{{ $store->accent_color ?? '#4e73df' }}"
+                                               pattern="^#[0-9A-Fa-f]{6}$" required>
                                     </div>
-                                    @error('accent_color')
-                                        <div class="text-danger small">{{ $message }}</div>
-                                    @enderror
-                                    <small class="form-text text-muted">This color will be used for buttons, links, and highlights</small>
+                                    <small class="form-text text-muted">Select a color or enter a hex code</small>
+                                    
+                                    <!-- Color presets -->
+                                    <div class="mt-2">
+                                        <div class="d-flex flex-wrap gap-2">
+                                            @foreach($accentColors as $hex => $label)
+                                                <button type="button" class="btn btn-sm color-preset" 
+                                                        style="background-color: {{ $hex }}; width: 30px; height: 30px; border-radius: 50%;"
+                                                        data-color="{{ $hex }}" title="{{ $label }}"></button>
+                                            @endforeach
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -356,5 +361,33 @@
             }
         });
     });
+</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Sync color picker with text input
+    const colorPicker = document.getElementById('color_picker');
+    const accentColor = document.getElementById('accent_color');
+    
+    // Update text input when color picker changes
+    colorPicker.addEventListener('input', function() {
+        accentColor.value = this.value;
+    });
+    
+    // Update color picker when text input changes
+    accentColor.addEventListener('input', function() {
+        if (this.value.match(/^#[0-9A-Fa-f]{6}$/)) {
+            colorPicker.value = this.value;
+        }
+    });
+    
+    // Set color when preset buttons are clicked
+    document.querySelectorAll('.color-preset').forEach(button => {
+        button.addEventListener('click', function() {
+            const color = this.getAttribute('data-color');
+            colorPicker.value = color;
+            accentColor.value = color;
+        });
+    });
+});
 </script>
 @endpush

@@ -34,26 +34,95 @@ class ProductController extends Controller
         // Switch to tenant database
         $this->databaseManager->switchToTenant($store);
         
-        // Debug the current connection
-        $currentDb = DB::connection()->getDatabaseName();
-        Log::info("Current database in products index", ['database' => $currentDb]);
+        try {
+            $query = DB::connection('tenant')->table('products');
+            
+            // Handle search
+            if ($request->has('search') && !empty($request->search)) {
+                $searchTerm = $request->search;
+                $query->where(function($q) use ($searchTerm) {
+                    $q->where('name', 'like', "%{$searchTerm}%")
+                      ->orWhere('sku', 'like', "%{$searchTerm}%")
+                      ->orWhere('barcode', 'like', "%{$searchTerm}%")
+                      ->orWhere('description', 'like', "%{$searchTerm}%");
+                });
+            }
+            
+            // Get products with pagination
+            $products = $query->orderBy('created_at', 'desc')
+                            ->paginate(15)
+                            ->withQueryString();
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return view('products.index', compact('store', 'products'));
+        } catch (\Exception $e) {
+            // Log error and handle exception
+            Log::error("Error fetching products", [
+                'store' => $store->slug,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return view('products.index', [
+                'store' => $store,
+                'products' => collect([]),
+                'error' => 'There was a problem loading the products.'
+            ]);
+        }
+    }
+
+    /**
+     * AJAX search for products
+     */
+    public function search(Request $request)
+    {
+        $store = $this->getCurrentStore($request);
+        
+        // Switch to tenant database
+        $this->databaseManager->switchToTenant($store);
         
         try {
-            // Add pagination with 15 items per page
-            $products = DB::connection('tenant')->table('products')->paginate(15);
+            // Validate search term
+            $searchTerm = $request->query('q', '');
+            if (strlen($searchTerm) < 2) {
+                return response()->json(['products' => []]);
+            }
             
+            // Search products
+            $products = DB::connection('tenant')->table('products')
+                ->select('id', 'name', 'sku', 'price', 'stock', 'barcode')
+                ->where(function($query) use ($searchTerm) {
+                    $query->where('name', 'like', "%{$searchTerm}%")
+                        ->orWhere('sku', 'like', "%{$searchTerm}%")
+                        ->orWhere('barcode', 'like', "%{$searchTerm}%");
+                })
+                ->limit(10)
+                ->get();
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return response()->json([
+                'products' => $products,
+                'count' => $products->count()
+            ]);
         } catch (\Exception $e) {
-            Log::error("Error fetching products", ['error' => $e->getMessage()]);
-            $products = new \Illuminate\Pagination\LengthAwarePaginator([], 0, 15);
+            // Log error
+            Log::error("Error searching products", [
+                'store' => $store->slug,
+                'query' => $searchTerm,
+                'error' => $e->getMessage()
+            ]);
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return response()->json(['error' => 'Error searching products'], 500);
         }
-        
-        // Switch back to main database
-        $this->databaseManager->switchToMain();
-        
-        // Add a null product_id since index view shows multiple products
-        $product_id = null;
-        
-        return view('products.index', compact('products', 'store', 'product_id'));
     }
 
     /**
@@ -62,12 +131,25 @@ class ProductController extends Controller
     public function create(Request $request)
     {
         $store = $this->getCurrentStore($request);
+        
+        // Check product limit before showing form
         if (!$store->canAddProducts()) {
-            
             return redirect()->route('products.index', ['subdomain' => $store->slug])
                 ->with('error', 'You have reached the product limit for your current plan. Please upgrade to add more products.');
         }
-        return view('products.create', compact('store'));
+        
+        // Connect to tenant database to get categories
+        $this->databaseManager->switchToTenant($store);
+        
+        // Get categories for dropdown
+        $categories = DB::connection('tenant')->table('categories')
+                        ->where('status', true)
+                        ->orderBy('sort_order')
+                        ->get();
+        
+        $this->databaseManager->switchToMain();
+        
+        return view('products.create', compact('store', 'categories'));
     }
 
     /**
@@ -77,18 +159,22 @@ class ProductController extends Controller
     {
         $store = $this->getCurrentStore($request);
         
-        // Validate inputs first
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:255|unique:tenant.products,sku',
-            'price' => 'required|numeric',
-            'stock' => 'required|integer',
-        ]);
-
-        // Get limit from pricing tier and current count in a transaction to prevent race conditions
+        // Connect to tenant database BEFORE validation
+        $this->databaseManager->switchToTenant($store);
+        
         try {
-            // Switch to tenant database
-            $this->databaseManager->switchToTenant($store);
+            
+            // Validate data after connecting to tenant database
+            $validatedData = $request->validate([
+                'name' => 'required|string|max:255',
+                'sku' => 'required|string|max:255|unique:products,sku', // No tenant. prefix needed now
+                'price' => 'required|numeric|min:0',
+                'stock' => 'required|integer|min:0',
+                'description' => 'nullable|string',
+                'barcode' => 'nullable|string|max:100',
+                'category_id' => 'nullable', // No tenant. prefix needed now
+                'status' => 'sometimes|boolean',
+            ]);
             
             // Double-check product limit in a transaction to handle race conditions
             DB::connection('tenant')->beginTransaction();
@@ -105,30 +191,28 @@ class ProductController extends Controller
                 DB::connection('tenant')->rollBack();
                 $this->databaseManager->switchToMain();
                 
-                // Get upgrade URL for current plan
-                $upgradePath = "/{$store->slug}/subscription";
-                
-                // Add flash data with additional details for frontend display
-                session()->flash('limit_data', [
-                    'current' => $currentCount,
-                    'limit' => $maxProducts,
-                    'type' => 'product',
-                    'upgrade_url' => $upgradePath
-                ]);
-                
                 return redirect()->route('products.index', ['subdomain' => $store->slug])
                     ->with('error', 'Product limit reached. Please upgrade your plan to add more products.');
             }
             
-            // Safe to add the product now
-            DB::connection('tenant')->table('products')->insert([
-                'name' => $request->name,
-                'sku' => $request->sku,
-                'price' => $request->price,
-                'stock' => $request->stock, 
+           
+            // Prepare product data
+            $productData = [
+                'name' => $validatedData['name'],
+                'sku' => $validatedData['sku'],
+                'price' => $validatedData['price'],
+                'stock' => $validatedData['stock'],
+                'description' => $validatedData['description'] ?? null,
+                'barcode' => $validatedData['barcode'] ?? null,
+                'category_id' => !empty($validatedData['category_id']) ? $validatedData['category_id'] : null,
+                'status' => isset($validatedData['status']) ? (bool)$validatedData['status'] : true,
+                'sold_count' => 0,
                 'created_at' => now(),
-                'updated_at' => now()
-            ]);
+                'updated_at' => now(),
+            ];
+            
+            // Insert the product
+            $productId = DB::connection('tenant')->table('products')->insertGetId($productData);
             
             // Commit changes
             DB::connection('tenant')->commit();
@@ -136,18 +220,36 @@ class ProductController extends Controller
             // Switch back to main database
             $this->databaseManager->switchToMain();
             
-            return redirect()->route('products.index', ['subdomain' => $store->slug])
+            return redirect()->route('products.show', [
+                    'subdomain' => $store->slug, 
+                    'product_id' => $productId
+                ])
                 ->with('success', 'Product created successfully.');
                 
-        } catch (\Exception $e) {
-            // Roll back any changes
-            DB::connection('tenant')->rollBack();
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            // For validation errors, switch back to main database
             $this->databaseManager->switchToMain();
             
-            Log::error("Error creating product", ['error' => $e->getMessage()]);
+            // Re-throw the validation exception
+            throw $e;
+            
+        } catch (\Exception $e) {
+            // Roll back any changes
+            if (DB::connection('tenant')->transactionLevel() > 0) {
+                DB::connection('tenant')->rollBack();
+            }
+            
+            $this->databaseManager->switchToMain();
+            
+            Log::error("Error creating product", [
+                'store' => $store->slug,
+                'data' => $request->except(['_token']),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             
             return redirect()->back()
-                ->with('error', 'An error occurred while creating the product.')
+                ->with('error', 'An error occurred while creating the product: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -226,6 +328,12 @@ class ProductController extends Controller
             // Convert to object for view consistency
             $product = (object) $product;
             
+            // Get categories for dropdown - ADDED THIS
+            $categories = DB::connection('tenant')->table('categories')
+                            ->where('status', true)
+                            ->orderBy('sort_order')
+                            ->get();
+            
             // Convert string dates to Carbon instances
             if (property_exists($product, 'created_at')) {
                 $product->created_at = \Carbon\Carbon::parse($product->created_at);
@@ -238,7 +346,7 @@ class ProductController extends Controller
             // Switch back to main database
             $this->databaseManager->switchToMain();
             
-            return view('products.edit', compact('product', 'store', 'product_id'));
+            return view('products.edit', compact('product', 'store', 'product_id', 'categories'));
         } catch (\Exception $e) {
             // Log the error
             Log::error("Error finding product for edit", [
@@ -273,29 +381,58 @@ class ProductController extends Controller
             abort(404);
         }
         
-        $request->validate([
+        // Updated validation rules to include category_id and other fields
+        $validatedData = $request->validate([
             'name' => 'required|string|max:255',
             'sku' => 'required|string|max:100',
-            'price' => 'required|numeric',
-            'stock' => 'required|integer',
+            'price' => 'required|numeric|min:0',
+            'stock' => 'required|integer|min:0',
+            'description' => 'nullable|string',
+            'barcode' => 'required|string|max:100',
+            'category_id' => 'nullable|integer|exists:tenant.categories,id', // Added validation for category
+            'status' => 'sometimes|boolean',
         ]);
         
-        // Update using query builder
-        DB::connection('tenant')->table('products')
-            ->where('id', $product_id)
-            ->update([
-                'name' => $request->name,
-                'sku' => $request->sku,
-                'price' => $request->price,
-                'stock' => $request->stock,
+        try {
+            // Prepare full product data with all fields
+            $productData = [
+                'name' => $validatedData['name'],
+                'sku' => $validatedData['sku'],
+                'price' => $validatedData['price'],
+                'stock' => $validatedData['stock'],
+                'description' => $validatedData['description'] ?? null,
+                'barcode' => $validatedData['barcode'] ?? null,
+                'category_id' => $validatedData['category_id'] ?? null, // Added category_id
+                'status' => isset($validatedData['status']) ? (bool)$validatedData['status'] : true,
                 'updated_at' => now()
+            ];
+            
+            // Update using query builder
+            DB::connection('tenant')->table('products')
+                ->where('id', $product_id)
+                ->update($productData);
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return redirect()->route('products.show', ['subdomain' => $store->slug, 'product_id' => $product_id])
+                ->with('success', 'Product updated successfully.');
+        } catch (\Exception $e) {
+            // Log the error
+            Log::error("Error updating product", [
+                'store' => $store->slug,
+                'product_id' => $product_id,
+                'data' => $request->except(['_token']),
+                'error' => $e->getMessage()
             ]);
-        
-        // Switch back to main database
-        $this->databaseManager->switchToMain();
-        
-        return redirect()->route('products.index', ['subdomain' => $store->slug])
-            ->with('success', 'Product updated successfully.');
+            
+            // Switch back to main database
+            $this->databaseManager->switchToMain();
+            
+            return redirect()->back()
+                ->with('error', 'An error occurred while updating the product: ' . $e->getMessage())
+                ->withInput();
+        }
     }
 
     /**

@@ -41,17 +41,18 @@ class StoreSettingsController extends Controller
         
         // Define available accent colors with their labels
         $accentColors = [
-            'blue' => 'Blue (Default)',
-            'indigo' => 'Indigo',
-            'purple' => 'Purple',
-            'pink' => 'Pink',
-            'red' => 'Red',
-            'orange' => 'Orange',
-            'yellow' => 'Yellow',
-            'green' => 'Green',
-            'teal' => 'Teal',
-            'cyan' => 'Cyan',
+            '#4e73df' => 'Blue (Default)',
+            '#6610f2' => 'Indigo',
+            '#6f42c1' => 'Purple',
+            '#e83e8c' => 'Pink',
+            '#e74a3b' => 'Red',
+            '#fd7e14' => 'Orange', 
+            '#f6c23e' => 'Yellow',
+            '#1cc88a' => 'Green',
+            '#20c9a6' => 'Teal',
+            '#36b9cc' => 'Cyan',
         ];
+        
         
         return view('settings.index', compact('store', 'accentColors'));
     }

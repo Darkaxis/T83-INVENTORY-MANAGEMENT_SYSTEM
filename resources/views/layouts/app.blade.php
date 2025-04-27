@@ -106,6 +106,27 @@
           color: var(--secondary);
       }
   </style>
+
+  @if(isset($store) && $store->accent_color)
+  <style>
+      :root {
+          --bs-primary: {{ $store->accent_color }};
+          --bs-primary-rgb: {{ implode(',', sscanf($store->accent_color, "#%02x%02x%02x")) }};
+      }
+      
+      .btn-primary,
+      .bg-primary {
+          background-color: {{ $store->accent_color }} !important;
+          border-color: {{ $store->accent_color }} !important;
+      }
+      
+      .text-primary {
+          color: {{ $store->accent_color }} !important;
+      }
+      
+      /* Add more custom styling as needed */
+  </style>
+  @endif
   
   @stack('styles')
 </head>
