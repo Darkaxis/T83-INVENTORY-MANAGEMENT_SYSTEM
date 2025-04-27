@@ -103,16 +103,7 @@
           </a>
         </li>
 
-        <!-- Dashboard - Available to all tiers -->
-        <li class="nav-item">
-          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" 
-             href="{{ route('tenant.dashboard', ['subdomain' => $subdomain]) }}">
-            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-              <i class="fas fa-tachometer-alt text-dark"></i>
-            </div>
-            <span class="nav-link-text ms-1">Dashboard</span>
-          </a>
-        </li>
+       
 
         <!-- History - Available to Starter & Pro tiers -->
         @if($tierLevel == 'starter' || $tierLevel == 'pro')
@@ -147,6 +138,17 @@
 
         <!-- User management - Only for managers -->
         @if($isManager)
+         
+         <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" 
+             href="{{ route('tenant.dashboard', ['subdomain' => $subdomain]) }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-tachometer-alt text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">Dashboard</span>
+          </a>
+        </li>
+
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('staff.*') ? 'active bg-light' : '' }}"
              href="{{ route('staff.index', ['subdomain' => $subdomain]) }}">
