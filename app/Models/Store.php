@@ -301,4 +301,71 @@ class Store extends Model
         
         return $colors[$colorName] ?? $colors['blue'];
     }
+
+    /**
+     * Get color variations based on the store's accent color.
+     *
+     * @return array
+     */
+    public function getAccentColorCssAttribute()
+    {
+        $hex = $this->accent_color;
+        
+        // Check if the accent_color is already a hex value
+        if (preg_match('/^#[0-9A-Fa-f]{6}$/', $hex)) {
+            // Extract RGB values
+            $r = hexdec(substr($hex, 1, 2));
+            $g = hexdec(substr($hex, 3, 2));
+            $b = hexdec(substr($hex, 5, 2));
+            
+            // Create darker variations
+            $darken10 = $this->shadeHexColor($hex, -10);
+            $darken15 = $this->shadeHexColor($hex, -15);
+            
+            return [
+                'primary' => $hex,
+                'secondary' => $darken10,
+                'tertiary' => $darken15,
+                'highlight' => "rgba($r, $g, $b, 0.25)",
+            ];
+        }
+        
+        // Fall back to pre-defined colors for backward compatibility
+        $predefinedColors = [
+            // Your existing color definitions
+        ];
+        
+        return $predefinedColors[$hex] ?? $predefinedColors['blue'];
+    }
+
+    /**
+     * Helper function to darken/lighten a hex color.
+     *
+     * @param string $color Hex color code
+     * @param int $percent Percentage to darken/lighten
+     * @return string
+     */
+    private function shadeHexColor($color, $percent) 
+    {
+        $R = hexdec(substr($color, 1, 2));
+        $G = hexdec(substr($color, 3, 2));
+        $B = hexdec(substr($color, 5, 2));
+
+        $R = (int)($R * (100 + $percent) / 100);
+        $G = (int)($G * (100 + $percent) / 100);
+        $B = (int)($B * (100 + $percent) / 100);
+
+        $R = min(255, max(0, $R));
+        $G = min(255, max(0, $G));
+        $B = min(255, max(0, $B));
+
+        $RR = dechex($R);
+        $GG = dechex($G);
+        $BB = dechex($B);
+
+        return '#' . 
+            (strlen($RR) < 2 ? '0' : '') . $RR . 
+            (strlen($GG) < 2 ? '0' : '') . $GG . 
+            (strlen($BB) < 2 ? '0' : '') . $BB;
+    }
 }

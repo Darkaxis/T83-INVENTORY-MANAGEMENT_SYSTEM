@@ -76,16 +76,19 @@
                             <div class="col-md-6">
                                 <div class="form-group mb-4">
                                     <label for="accent_color" class="form-label fw-bold">Accent Color</label>
-                                    <select name="accent_color" id="accent_color" class="form-select @error('accent_color') is-invalid @enderror">
-                                        @foreach($accentColors as $value => $label)
-                                            <option value="{{ $value }}" {{ old('accent_color', $store->accent_color) == $value ? 'selected' : '' }}
-                                                    data-color="{{ $value }}">
-                                                {{ $label }}
-                                            </option>
-                                        @endforeach
-                                    </select>
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="fas fa-palette"></i></span>
+                                        <input type="color" id="color_picker" class="form-control form-control-color" 
+                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}" 
+                                               title="Choose your accent color">
+                                        <input type="text" id="color_hex" class="form-control" 
+                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}" 
+                                               pattern="^#[0-9A-Fa-f]{6}$" placeholder="#4e73df">
+                                        <input type="hidden" name="accent_color" id="accent_color" 
+                                               value="{{ old('accent_color', $store->accent_color_hex ?? '#4e73df') }}">
+                                    </div>
                                     @error('accent_color')
-                                        <div class="invalid-feedback">{{ $message }}</div>
+                                        <div class="text-danger small">{{ $message }}</div>
                                     @enderror
                                     <small class="form-text text-muted">This color will be used for buttons, links, and highlights</small>
                                 </div>
@@ -98,7 +101,9 @@
                                             <span class="badge bg-primary px-3 py-2">Primary</span>
                                             <button class="btn btn-primary btn-sm">Button</button>
                                             <a href="#" class="btn btn-link text-primary">Link</a>
-                                            
+                                            <div class="color-sample color-sample-primary"></div>
+                                            <div class="color-sample color-sample-secondary"></div>
+                                            <div class="color-sample color-sample-tertiary"></div>
                                         </div>
                                     </div>
                                 </div>
@@ -209,94 +214,133 @@
     .bg-primary {
         background-color: var(--primary, #4e73df) !important;
     }
+    
+    /* Color picker styles */
+    .form-control-color {
+        width: 4rem;
+        padding: 0.375rem;
+        height: 38px;
+    }
+    
+    #color_hex {
+        font-family: monospace;
+        text-transform: uppercase;
+    }
+    
+    /* Enhanced preview area */
+    #color-preview {
+        border: 1px solid #dee2e6;
+        padding: 15px;
+        border-radius: 6px;
+        background-color: white;
+    }
+    
+    /* Add more preview elements */
+    .color-sample {
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+        display: inline-block;
+        margin-right: 10px;
+        border: 1px solid #dee2e6;
+    }
+    
+    .color-sample-primary {
+        background-color: var(--primary, #4e73df);
+    }
+    
+    .color-sample-secondary {
+        background-color: var(--secondary, #2e59d9);
+    }
+    
+    .color-sample-tertiary {
+        background-color: var(--tertiary, #2653d4);
+    }
 </style>
 @endpush
 
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Color preview functionality
-        const accentColorSelect = document.getElementById('accent_color');
+        // Color picker functionality
+        const colorPicker = document.getElementById('color_picker');
+        const colorHexInput = document.getElementById('color_hex');
+        const accentColorInput = document.getElementById('accent_color');
         const colorPreview = document.getElementById('color-preview');
         
-        // Color mapping (same as in Store model)
-        const colors = {
-            'blue': {
-                primary: '#4e73df',
-                secondary: '#2e59d9',
-                tertiary: '#2653d4',
-                highlight: 'rgba(78, 115, 223, 0.25)'
-            },
-            'indigo': {
-                primary: '#6610f2',
-                secondary: '#520dc2',
-                tertiary: '#4d0cb3',
-                highlight: 'rgba(102, 16, 242, 0.25)'
-            },
-            'purple': {
-                primary: '#6f42c1',
-                secondary: '#5a359f',
-                tertiary: '#533291',
-                highlight: 'rgba(111, 66, 193, 0.25)'
-            },
-            'pink': {
-                primary: '#e83e8c',
-                secondary: '#d4317a',
-                tertiary: '#c42e72',
-                highlight: 'rgba(232, 62, 140, 0.25)'
-            },
-            'red': {
-                primary: '#e74a3b',
-                secondary: '#d13b2e',
-                tertiary: '#c0372a',
-                highlight: 'rgba(231, 74, 59, 0.25)'
-            },
-            'orange': {
-                primary: '#fd7e14',
-                secondary: '#e96e10',
-                tertiary: '#d6630f',
-                highlight: 'rgba(253, 126, 20, 0.25)'
-            },
-            'yellow': {
-                primary: '#f6c23e',
-                secondary: '#e9b32d',
-                tertiary: '#e0ac29',
-                highlight: 'rgba(246, 194, 62, 0.25)'
-            },
-            'green': {
-                primary: '#1cc88a',
-                secondary: '#18a97c',
-                tertiary: '#169b72',
-                highlight: 'rgba(28, 200, 138, 0.25)'
-            },
-            'teal': {
-                primary: '#20c9a6',
-                secondary: '#1ba393',
-                tertiary: '#199688',
-                highlight: 'rgba(32, 201, 166, 0.25)'
-            },
-            'cyan': {
-                primary: '#36b9cc',
-                secondary: '#2fa6b9',
-                tertiary: '#2a98a9',
-                highlight: 'rgba(54, 185, 204, 0.25)'
-            }
-        };
-        
-        // Update the preview colors when select changes
-        function updateColorPreview() {
-            const selectedColor = accentColorSelect.value;
-            const colorSet = colors[selectedColor] || colors['blue'];
+        // Function to update all related color elements
+        function updateColors(hex) {
+            // Update all inputs
+            colorPicker.value = hex;
+            colorHexInput.value = hex;
+            accentColorInput.value = hex;
             
-            document.documentElement.style.setProperty('--primary', colorSet.primary);
-            document.documentElement.style.setProperty('--secondary', colorSet.secondary);
-            document.documentElement.style.setProperty('--tertiary', colorSet.tertiary);
-            document.documentElement.style.setProperty('--highlight', colorSet.highlight);
+            // Get RGB values from hex
+            const r = parseInt(hex.slice(1, 3), 16);
+            const g = parseInt(hex.slice(3, 5), 16);
+            const b = parseInt(hex.slice(5, 7), 16);
+            
+            // Create color variations
+            const primary = hex;
+            const secondary = shadeColor(hex, -10); // 10% darker
+            const tertiary = shadeColor(hex, -15);  // 15% darker
+            const highlight = `rgba(${r}, ${g}, ${b}, 0.25)`;
+            
+            // Set CSS variables
+            document.documentElement.style.setProperty('--primary', primary);
+            document.documentElement.style.setProperty('--secondary', secondary);
+            document.documentElement.style.setProperty('--tertiary', tertiary);
+            document.documentElement.style.setProperty('--highlight', highlight);
         }
         
-        // Initial update and add event listener
-        updateColorPreview();
-        accentColorSelect.addEventListener('change', updateColorPreview);
+        // Function to darken or lighten a color
+        function shadeColor(color, percent) {
+            let R = parseInt(color.substring(1,3),16);
+            let G = parseInt(color.substring(3,5),16);
+            let B = parseInt(color.substring(5,7),16);
+
+            R = parseInt(R * (100 + percent) / 100);
+            G = parseInt(G * (100 + percent) / 100);
+            B = parseInt(B * (100 + percent) / 100);
+
+            R = (R < 255) ? R : 255;  
+            G = (G < 255) ? G : 255;  
+            B = (B < 255) ? B : 255;  
+
+            R = Math.max(0, R);
+            G = Math.max(0, G);
+            B = Math.max(0, B);
+
+            const RR = ((R.toString(16).length === 1) ? "0" + R.toString(16) : R.toString(16));
+            const GG = ((G.toString(16).length === 1) ? "0" + G.toString(16) : G.toString(16));
+            const BB = ((B.toString(16).length === 1) ? "0" + B.toString(16) : B.toString(16));
+
+            return "#" + RR + GG + BB;
+        }
+        
+        // Event listeners for color picker and hex input
+        colorPicker.addEventListener('input', function() {
+            updateColors(this.value);
+        });
+        
+        colorHexInput.addEventListener('input', function() {
+            // Validate hex input
+            if (/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                updateColors(this.value);
+            }
+        });
+        
+        colorHexInput.addEventListener('blur', function() {
+            // Force valid hex format on blur
+            if (!/^#[0-9A-Fa-f]{6}$/.test(this.value)) {
+                this.value = accentColorInput.value;
+            } else {
+                updateColors(this.value);
+            }
+        });
+        
+        // Initial update
+        updateColors(accentColorInput.value);
         
         // Logo preview
         const logoInput = document.getElementById('logo');

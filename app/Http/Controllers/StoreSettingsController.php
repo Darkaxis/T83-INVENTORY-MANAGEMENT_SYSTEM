@@ -65,7 +65,7 @@ class StoreSettingsController extends Controller
         
         $validator = Validator::make($request->all(), [
             'name' => 'required|string|max:255',
-            'accent_color' => 'required|string|in:blue,indigo,purple,pink,red,orange,yellow,green,teal,cyan',
+            'accent_color' => 'required|string|regex:/^#[0-9A-Fa-f]{6}$/', // Validate hex color
             'logo' => 'nullable|image|mimes:jpg,jpeg,png,svg|max:2048',
         ]);
         
