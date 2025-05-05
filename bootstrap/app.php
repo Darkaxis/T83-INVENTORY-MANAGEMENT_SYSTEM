@@ -46,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         ]);
     })
+    
     ->withCommands([
         CreateTenantDatabases::class,
         TenantMigrate::class,
@@ -54,6 +55,8 @@ return Application::configure(basePath: dirname(__DIR__))
         \App\Console\Commands\SetupDemoStore::class,
       
     ])
+    //aliases
+
     ->withExceptions(function (Exceptions $exceptions) {
         //
     })->create();

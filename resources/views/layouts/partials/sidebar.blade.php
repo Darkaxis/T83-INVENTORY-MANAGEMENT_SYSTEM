@@ -26,7 +26,7 @@
             $subdomain = $segments[0]; // Get the subdomain part
             
             $isSubdomain = true;
-            Log::info('Subdomain detected', ['host' => $host, 'subdomain' => $subdomain]);
+           
         }
         
         // Get current store if on subdomain
@@ -127,6 +127,7 @@
               <i class="fas fa-chart-bar text-dark"></i>
             </div>
             <span class="nav-link-text ms-1">Reports</span>
+            <span class="badge rounded-pill bg-primary ms-auto">Pro</span>
           </a>
         </li>
         @endif

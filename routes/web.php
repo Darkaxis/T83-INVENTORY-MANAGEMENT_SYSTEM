@@ -145,10 +145,12 @@ Route::get('/logo/{store}', function (Store $store) {
     return response()->file(public_path('assets/img/default-logo.png'));
 })->name('store.logo');
 
-Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 'tenant'])->group(function () {
-    // Product management
-    Route::get('/tenantdashboard', [TenantDashboardController::class, 'index'])->name('tenant.dashboard');
-    Route::prefix('/products')->name('products.')->group(function () {
+Route::domain('{subdomain}.inventory.test')->middleware(['web', 'tenant.check', 'tenant'])->group(function () {
+    // Dashboard - default landing page
+    Route::get('/', [TenantDashboardController::class, 'index'])->name('tenant.dashboard');
+    
+    // Product management - Available to all tiers
+    Route::prefix('products')->name('products.')->group(function () {
         Route::get('/', [ProductController::class, 'index'])->name('index');
         Route::get('/create', [ProductController::class, 'create'])->name('create');
         Route::post('/', [ProductController::class, 'store'])->name('store');
@@ -156,200 +158,57 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web','tenant.check' , 
         Route::get('/{product_id}/edit', [ProductController::class, 'edit'])->name('edit');
         Route::put('/{product_id}', [ProductController::class, 'update'])->name('update');
         Route::delete('/{product_id}', [ProductController::class, 'destroy'])->name('destroy');
-    });
-        // Add this with your other product routes
-    Route::get('/products/search', [ProductController::class, 'search'])->name('products.search');
-    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('tenant.subscription');
-    Route::post('/subscription/upgrade', [SubscriptionController::class, 'upgrade'])->name('tenant.subscription.upgrade');
-    // Add this to routes/web.php inside the subdomain route group
-    
-
-    // Staff management
-    Route::get('/staff', [StaffController::class, 'index'])->name('staff.index');
-    Route::get('/staff/create', [StaffController::class, 'create'])->name('staff.create');
-    Route::post('/staff', [StaffController::class, 'store'])->name('staff.store');
-    Route::get('/staff/{staff_id}/edit', [StaffController::class, 'edit'])->name('staff.edit');
-    Route::put('/staff/{staff_id}', [StaffController::class, 'update'])->name('staff.update');
-    Route::delete('/staff/{staff_id}', [StaffController::class, 'destroy'])->name('staff.destroy');
-    Route::post('/staff/{staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('staff.reset-password');
-        
-    // Starter tier routes
-        Route::get('/checkout/history', [CheckoutController::class, 'history'])
-->name('checkout.history')
-->middleware(['auth', 'subscription.tier']);
-    // Profile - Password change
-    Route::get('/profile/password', [ProfileController::class, 'showChangePasswordForm'])->name('profile.password');
-    Route::post('/profile/password', [ProfileController::class, 'changePassword'])->name('profile.update-password');
-    
-    // Checkout routes
-    // Free tier routes (no middleware needed as this is the base access level)
-Route::get('/products', [ProductController::class, 'index'])->name('products.index');
-Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-
-// Starter tier routes
-Route::get('/checkout/history', [CheckoutController::class, 'history'])
-    ->name('checkout.history')
-    ->middleware([ 'subscription.tier:starter']);
-
-// Manager-only routes that also need starter tier
-Route::group(['middleware' => ['subscription.tier:starter']], function () {
-    Route::get('/settings', [StoreSettingsController::class, 'index'])->name('settings.index');
-    Route::post('/settings', [StoreSettingsController::class, 'update'])->name('settings.update');
-});
-
-// Pro tier routes
-Route::get('/reports', [ReportController::class, 'index'])
-    ->name('reports.index')
-    ->middleware([ 'subscription.tier:pro']);
-
-
-
-        Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout.index');
-        Route::get('/checkout/search', [CheckoutController::class, 'searchProducts'])->name('checkout.search');
-        Route::post('/checkout/process', [CheckoutController::class, 'process'])->name('checkout.process');
-        Route::get('/checkout/receipt/{sale_id}', [CheckoutController::class, 'receipt'])->name('checkout.receipt');
-        Route::get('/checkout/history', [CheckoutController::class, 'history'])->name('checkout.history');
-   
-});
-
-/**
- * Debug/Testing Routes
- * Remove these in production
- */
-Route::domain('{subdomain}.inventory.test')->group(function () {
-    // Existing routes...
-    
-    // Add this new route
-    Route::get('/subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
-});
-
-Route::domain('{subdomain}.inventory.test')->middleware(['web'])->group(function () {
-    // CSRF test form
-    
-    Route::get('/test-form', function () {
-        return '<form method="POST" action="/test-form-submit">
-            '.csrf_field().'
-            <input type="text" name="test" value="test">
-            <button type="submit">Submit</button>
-        </form>';
+        Route::get('/search', [ProductController::class, 'search'])->name('search');
     });
     
-  
-});
-
-Route::get('/session-test-page', function() {
-    // Get current value first before modifying
-    $currentCount = session('page_loads', 0);
-    $newCount = $currentCount + 1;
-    
-    // Set values individually with explicit save
-    session(['page_loads' => $newCount]);
-    session(['is_tenant' => true]);
-    session(['test_time' => date('H:i:s')]);
-    
-    // Force save the session after updates
-    session()->save();
-    
-    // Build a simple HTML page
-    $html = '
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Session Test</title>
-        <style>
-            body { font-family: Arial, sans-serif; margin: 40px; }
-            div { margin-bottom: 20px; }
-            pre { background: #f5f5f5; padding: 10px; }
-        </style>
-    </head>
-    <body>
-        <h1>Session Test Page</h1>
+    // Checkout system - Available to all tiers
+    Route::prefix('checkout')->name('checkout.')->group(function () {
+        Route::get('/', [CheckoutController::class, 'index'])->name('index');
+        Route::get('/search', [CheckoutController::class, 'searchProducts'])->name('search');
+        Route::post('/process', [CheckoutController::class, 'process'])->name('process');
+        Route::get('/receipt/{sale_id}', [CheckoutController::class, 'receipt'])->name('receipt');
         
-        <div>
-            <h3>Session ID: ' . session()->getId() . '</h3>
-        </div>
-        
-        <div>
-            <h3>Current Session Data:</h3>
-            <pre>' . json_encode(session()->all(), JSON_PRETTY_PRINT) . '</pre>
-        </div>
-        
-        <div>
-            <h3>Page load count: ' . $newCount . '</h3>
-            <p>Previous count: ' . $currentCount . '</p>
-            <p>Last loaded at: ' . date('H:i:s') . '</p>
-        </div>
-        
-        <div>
-            <h3>Test Links (click these to test session persistence):</h3>
-            <ul>
-                <li><a href="/session-test-page">Reload this page</a></li>
-                <li><a href="/session-debug">View raw session debug data</a></li>
-                <li><a href="/clear-session">Clear session</a></li>
-            </ul>
-        </div>
-    </body>
-    </html>';
+        // Checkout history - Starter tier and above
+        Route::get('/history', [CheckoutController::class, 'history'])
+            ->name('history')
+            ->middleware(['subscription.tier:starter']);
+    });
     
-    return $html;
+    // Subscription management
+    Route::prefix('subscription')->name('subscription.')->group(function () {
+        Route::get('/', [SubscriptionController::class, 'index'])->name('index');
+        Route::post('/upgrade', [SubscriptionController::class, 'upgrade'])->name('upgrade');
+    });
+    
+    // Staff management - Manager role
+    Route::prefix('staff')->name('staff.')->group(function () {
+        Route::get('/', [StaffController::class, 'index'])->name('index');
+        Route::get('/create', [StaffController::class, 'create'])->name('create');
+        Route::post('/', [StaffController::class, 'store'])->name('store');
+        Route::get('/{staff_id}/edit', [StaffController::class, 'edit'])->name('edit');
+        Route::put('/{staff_id}', [StaffController::class, 'update'])->name('update');
+        Route::delete('/{staff_id}', [StaffController::class, 'destroy'])->name('destroy');
+        Route::post('/{staff_id}/reset-password', [StaffController::class, 'resetPassword'])->name('reset-password');
+    });
+    
+    // Store Settings - Starter tier and above, manager role
+    Route::prefix('settings')->name('settings.')->middleware(['subscription.tier:starter',])->group(function () {
+        Route::get('/', [StoreSettingsController::class, 'index'])->name('index');
+        Route::post('/', [StoreSettingsController::class, 'update'])->name('update');
+    });
+    
+    // Reports - Pro tier only
+    Route::prefix('reports')->name('reports.')->middleware(['subscription.tier:pro'])->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+        Route::get('/sales/export/pdf', [ReportController::class, 'exportSalesPdf'])->name('sales.export.pdf');
+        Route::get('/sales/export/csv', [ReportController::class, 'exportSalesCsv'])->name('sales.export.csv');
+        Route::get('/products/export/csv', [ReportController::class, 'exportProductsCsv'])->name('reports.products.export.csv');
+    });
+    
+    // User profile
+    Route::prefix('profile')->name('profile.')->group(function () {
+        Route::get('/password', [ProfileController::class, 'showChangePasswordForm'])->name('password');
+        Route::post('/password', [ProfileController::class, 'changePassword'])->name('update-password');
+    });
 });
-
-// Add a session clearing route
-Route::get('/clear-session', function() {
-    session()->flush();
-    return redirect('/session-test-page')->with('message', 'Session cleared');
-});
-// Add with other public routes
-Route::get('/clear-session', function() {
-    session()->flush();
-    return redirect('/session-test-page')->with('message', 'Session cleared');
-});
-
-Route::get('/session-debug', function() {
-    // Try setting a value
-    $testValue = 'test-' . time();
-    session(['debug_value' => $testValue]);
-    
-    // Get session driver and storage details
-    $sessionDriver = config('session.driver');
-    $sessionPath = storage_path('framework/sessions');
-    $sessionFiles = [];
-    
-    if ($sessionDriver == 'file') {
-        if (is_dir($sessionPath)) {
-            $files = scandir($sessionPath);
-            foreach ($files as $file) {
-                if ($file != '.' && $file != '..') {
-                    $sessionFiles[] = $file;
-                }
-            }
-        }
-    }
-    
-    // Force save
-    session()->save();
-    
-    return [
-        'test_value_set' => $testValue,
-        'session_id' => session()->getId(),
-        'test_retrieved' => session('debug_value'),
-        'page_loads' => session('page_loads'),
-        'driver' => $sessionDriver,
-        'all_data' => session()->all(),
-        'is_started' => session()->isStarted(),
-        'session_files_count' => count($sessionFiles),
-        'recent_session_files' => array_slice($sessionFiles, -5),
-    ];
-});
-
-Route::get('/test-update-pricing/{storeId}/{tierId}', function($storeId, $tierId) {
-    $store = \App\Models\Store::find($storeId);
-    $result = DB::statement("UPDATE stores SET pricing_tier_id = ? WHERE id = ?", [$tierId, $storeId]);
-    
-    return [
-        'success' => $result,
-        'store' => \App\Models\Store::find($storeId),
-        'pricing_tier' => \App\Models\PricingTier::find($tierId)
-    ];
-});
-

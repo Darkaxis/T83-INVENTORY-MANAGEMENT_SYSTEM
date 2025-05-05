@@ -1,0 +1,8 @@
+<!-- filepath: d:\WST\inventory-management-system\public\images\pro-badge.svg -->
+
+<svg width="50" height="50" viewBox="0 0 50 50" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="25" cy="25" r="22" fill="#4e73df"/>
+  <path d="M14,25 L14,17 L18,17 C19.1045695,17 20,17.8954305 20,19 C20,20.1045695 19.1045695,21 18,21 L14,21" stroke="white" stroke-width="2" fill="none"/>
+  <path d="M22,25 L22,17 L25.5,17 C27.7,17 29,18.3 29,20 C29,21.7 27.7,23 25.5,23 L22,23" stroke="white" stroke-width="2" fill="none"/>
+  <path d="M31,25 C34.5,25 36,22.5 36,21 C36,19.5 34.5,17 31,17 C31,17 31,25 31,25 Z" stroke="white" stroke-width="2" fill="none"/>
+</svg>
