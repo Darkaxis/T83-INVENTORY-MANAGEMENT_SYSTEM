@@ -1,0 +1,53 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'  # This workflow triggers when you push a tag that starts with "v"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        
+      - name: Set version
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Create version info file
+        run: |
+          echo '{
+            "version": "${{ steps.version.outputs.version }}",
+            "php_version": "8.1.0",
+            "mysql_version": "8.0.0",
+            "release_date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+          }' > version.json
+      
+      - name: Create update ZIP
+        run: |
+          mkdir -p update-v${{ steps.version.outputs.version }}
+          
+          # Copy required directories for update
+          cp -r app update-v${{ steps.version.outputs.version }}/
+          cp -r config update-v${{ steps.version.outputs.version }}/
+          cp -r database/migrations update-v${{ steps.version.outputs.version }}/database/
+          cp -r resources update-v${{ steps.version.outputs.version }}/
+          cp -r routes update-v${{ steps.version.outputs.version }}/
+          cp version.json update-v${{ steps.version.outputs.version }}/
+          
+          # Create the ZIP file
+          zip -r update-v${{ steps.version.outputs.version }}.zip update-v${{ steps.version.outputs.version }}
+      
+      - name: Create Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Version ${{ steps.version.outputs.version }}
+          draft: false
+          prerelease: false
+          body_path: CHANGELOG.md  # Optional: Include release notes from CHANGELOG.md
+          files: |
+            update-v${{ steps.version.outputs.version }}.zip
+            version.json
