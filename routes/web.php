@@ -22,6 +22,8 @@ use App\Http\Controllers\StoreSettingsController;
 use App\Models\Store;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\Admin\AdminSupportController;
+use App\Http\Controllers\TenantSupportController;
 
 /**
  * Public Routes (No Auth Required)
@@ -167,7 +169,7 @@ Route::get('/logo/{store}', function (Store $store) {
 
 Route::domain('{subdomain}.inventory.test')->middleware(['web', 'tenant.check', 'tenant'])->group(function () {
     // Dashboard - default landing page
-    Route::get('/', [TenantDashboardController::class, 'index'])->name('tenant.dashboard');
+    Route::get('/tenantdashboard', [TenantDashboardController::class, 'index'])->name('tenant.dashboard');
     
     // Product management - Available to all tiers
     Route::prefix('products')->name('products.')->group(function () {
@@ -231,4 +233,19 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web', 'tenant.check', 
         Route::get('/password', [ProfileController::class, 'showChangePasswordForm'])->name('password');
         Route::post('/password', [ProfileController::class, 'changePassword'])->name('update-password');
     });
+});
+
+
+Route::middleware([ 'tenant', 'tenant.check'])->prefix('tenant/support')->name('tenant.support.')->group(function () {
+    Route::get('/', [TenantSupportController::class, 'index'])->name('index');
+    Route::get('/create', [TenantSupportController::class, 'create'])->name('create');
+    Route::post('/', [TenantSupportController::class, 'store'])->name('store');
+    Route::get('/{id}', [TenantSupportController::class, 'show'])->name('show');
+    Route::post('/{id}/reply', [TenantSupportController::class, 'reply'])->name('reply');
+});
+
+Route::middleware([ 'admin'])->prefix('admin/support')->name('admin.support.')->group(function () {
+    Route::get('/', [AdminSupportController::class, 'index'])->name('index');
+    Route::get('/{id}', [AdminSupportController::class, 'show'])->name('show');
+    Route::post('/{id}/reply', [AdminSupportController::class, 'reply'])->name('reply');
 });

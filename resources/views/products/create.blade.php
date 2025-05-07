@@ -86,7 +86,11 @@
                         <small class="text-muted">Optional barcode for scanning</small>
                     </div>
                     
-                    <div class="col-md-6 mb-3">
+                    <!-- Hidden category field - default will be handled in controller -->
+                    <input type="hidden" name="category_id" value="{{ old('category_id') }}">
+                    
+                    <!-- Remove or comment out the original category dropdown -->
+                    {{-- <div class="col-md-6 mb-3">
                         <label for="category_id" class="form-label">Category</label>
                         <select class="form-select @error('category_id') is-invalid @enderror" id="category_id" name="category_id">
                             <option value="">-- Select Category --</option>
@@ -99,7 +103,7 @@
                         @error('category_id')
                             <div class="invalid-feedback">{{ $message }}</div>
                         @enderror
-                    </div>
+                    </div> --}}
                 </div>
                 
                 <div class="mb-3">

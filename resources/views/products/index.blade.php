@@ -14,22 +14,91 @@
             <p class="text-muted">Manage your inventory</p>
         </div>
         <div class="col-auto align-self-center">
-            <a href="{{ route('products.create', ['subdomain' => $store->slug]) }}" class="btn btn-primary">
-                <i class="fas fa-plus-circle me-2"></i>Add Product
-            </a>
+            @if($products->total() < $store->pricingTier->product_limit || $store->pricingTier->product_limit < 0)
+                <a href="{{ route('products.create', ['subdomain' => $store->slug]) }}" class="btn btn-primary">
+                    <i class="fas fa-plus-circle me-2"></i>Add Product
+                </a>
+            @else
+                <button class="btn btn-secondary" disabled title="Product limit reached">
+                    <i class="fas fa-plus-circle me-2"></i>Add Product
+                </button>
+                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-success ms-2">
+                    <i class="fas fa-arrow-up me-1"></i> Upgrade
+                </a>
+            @endif
+        </div>
+    </div>
+    
+    <!-- Product Limit Progress Bar -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body p-3">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <div class="bg-light rounded-circle p-3 me-3">
+                            <i class="fas fa-boxes text-primary fa-2x"></i>
+                        </div>
+                        <div>
+                            <h6 class="mb-0 fw-bold">Product Usage</h6>
+                            <p class="mb-0 text-muted small">
+                                {{ $store->pricingTier->name }} Plan • 
+                                {{ $store->billing_cycle == 'annual' ? 'Annual' : 'Monthly' }} billing
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-2">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <span class="h3 mb-0 me-2">{{ $products->total() }}</span>
+                            <span class="text-muted">/</span>
+                            <span class="h4 mb-0 ms-2">{{ $store->pricingTier->product_limit < 0 ? '∞' : number_format($store->pricingTier->product_limit) }}</span>
+                            <span class="ms-2 text-muted">products</span>
+                        </div>
+                        @php
+                            $productPercentUsed = $store->pricingTier->product_limit > 0 ? 
+                                min(100, round(($products->total() / $store->pricingTier->product_limit) * 100)) : 0;
+                        @endphp
+                        <div class="progress mt-2" style="height: 8px">
+                            <div class="progress-bar bg-{{ $productPercentUsed > 90 ? 'danger' : ($productPercentUsed > 75 ? 'warning' : 'info') }}" 
+                                 role="progressbar" 
+                                 style="width: {{ $productPercentUsed }}%" 
+                                 aria-valuenow="{{ $productPercentUsed }}" 
+                                 aria-valuemin="0" 
+                                 aria-valuemax="100"></div>
+                        </div>
+                        
+                        @if($productPercentUsed > 75)
+                            <div class="text-center mt-3">
+                                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrow-circle-up me-1"></i> Upgrade Plan
+                                </a>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
     
     @if(session('success'))
-    <div class="alert alert-success">
-        {{ session('success') }}
-    </div>
+        <div class="alert alert-success shadow-sm border-start border-success border-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                <div>{{ session('success') }}</div>
+            </div>
+        </div>
     @endif
     
     @if(session('error'))
-    <div class="alert alert-danger">
-        {{ session('error') }}
-    </div>
+        <div class="alert alert-danger shadow-sm border-start border-danger border-4">
+            <div class="d-flex">
+                <div class="me-3">
+                    <i class="fas fa-exclamation-circle fa-2x text-danger"></i>
+                </div>
+                <div>{{ session('error') }}</div>
+            </div>
+        </div>
     @endif
     
     <!-- Search Component -->

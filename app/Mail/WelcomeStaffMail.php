@@ -27,7 +27,7 @@ class WelcomeStaffMail extends Mailable
     {
         $this->store = $store;
         $this->password = $password;
-        $this->loginUrl = "http://{$store->slug}.inventory.test/login";
+        $this->loginUrl = "http://{$store->slug}.inventory.test";
     }
 
     /**

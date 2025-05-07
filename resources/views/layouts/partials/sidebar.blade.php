@@ -64,8 +64,17 @@
             <span class="nav-link-text ms-1">Update</span>
           </a>
         </li>
-      
         
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold" href="{{ route('admin.support.index') }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas faheadset text-dark"></i>
+            </div>
+            
+              <span>Support Tickets</span>
+             
+          </a>
+      </li>
       @else
 
         <!-- Tenant menu items (subdomain) -->
@@ -143,7 +152,7 @@
         @if($isManager)
          
          <li class="nav-item">
-          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('dashboard') ? 'active bg-light' : '' }}" 
+          <a class="nav-link text-dark font-weight-bold" 
              href="{{ route('tenant.dashboard', ['subdomain' => $subdomain]) }}">
             <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
               <i class="fas fa-tachometer-alt text-dark"></i>
@@ -176,16 +185,7 @@
         @endif
         @endif
 
-        <!-- Subscription - Always show to allow upgrades -->
-        <li class="nav-item">
-          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('subscription.*') ? 'active bg-light' : '' }}"
-             href="/{{ $subdomain}}/subscription">
-            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-              <i class="fas fa-credit-card text-dark"></i>
-            </div>
-            <span class="nav-link-text ms-1">Subscription</span>
-          </a>
-        </li>
+        
 
         <!-- User profile -->
         <li class="nav-item">
@@ -197,6 +197,15 @@
             <span class="nav-link-text ms-1">Profile</span>
           </a>
         </li>
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('tenant.support.*') ? 'active bg-light' : '' }}" 
+             href="{{ route('tenant.support.index') }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-life-ring text-dark"></i>
+            </div>
+              <span>Support</span>
+          </a>
+      </li>
         
       @endif
 
