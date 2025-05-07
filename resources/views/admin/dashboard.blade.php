@@ -189,9 +189,7 @@
               </div>
             </li>
           </ul>
-          <div class="mt-4 text-center">
-            <a href="{{ route('stores.create') }}" class="btn bg-gradient-dark w-100">Create New Store</a>
-          </div>
+        
         </div>
       </div>
     </div>

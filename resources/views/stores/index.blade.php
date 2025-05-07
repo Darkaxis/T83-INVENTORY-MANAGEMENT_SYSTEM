@@ -13,7 +13,7 @@
         <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
           <div class="bg-gradient-primary shadow-primary border-radius-lg pt-4 pb-3 d-flex justify-content-between">
             <h6 class="text-white text-capitalize ps-3">All Stores</h6>
-            <a href="{{ route('stores.create') }}" class="btn btn-sm btn-success me-3">Add Store</a>
+           
           </div>
         </div>
         <div class="card-body px-0 pb-2">
@@ -272,9 +272,7 @@
         <hr class="dark horizontal my-0">
         <div class="card-footer p-3">
           <p class="mb-0">
-            <a href="{{ route('stores.create') }}" class="text-primary text-sm font-weight-bolder">
-              <i class="fas fa-plus-circle me-1"></i> Add New Store
-            </a>
+           
           </p>
         </div>
       </div>
@@ -322,9 +320,7 @@
         <hr class="dark horizontal my-0">
         <div class="card-footer p-3">
           <p class="mb-0">
-            <a href="{{ route('admin.settings.tenant') }}" class="text-info text-sm font-weight-bolder">
-              <i class="fas fa-sliders-h me-1"></i> Tenant System Settings
-            </a>
+            
           </p>
         </div>
       </div>
