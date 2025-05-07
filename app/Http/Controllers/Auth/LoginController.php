@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\ValidationException;
 
 use function Laravel\Prompts\error;
 
@@ -56,24 +58,57 @@ class LoginController extends Controller
     }
 
     /**
+     * Validate the user login request with reCAPTCHA.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return void
+     *
+     * @throws \Illuminate\Validation\ValidationException
+     */
+    protected function validateLogin(Request $request)
+    {
+        $request->validate([
+            $this->username() => 'required|string',
+            'password' => 'required|string',
+            'g-recaptcha-response' => 'required',
+        ], [
+            'g-recaptcha-response.required' => 'Please complete the CAPTCHA verification.'
+        ]);
+
+        // Verify CAPTCHA with Google
+        $response = Http::asForm()->post('https://www.google.com/recaptcha/api/siteverify', [
+            'secret' => env('RECAPTCHA_SECRET_KEY'),
+            'response' => $request->input('g-recaptcha-response'),
+            'remoteip' => $request->ip(),
+        ]);
+
+        if (!$response->json()['success']) {
+            throw ValidationException::withMessages([
+                'g-recaptcha-response' => ['CAPTCHA verification failed. Please try again.']
+            ]);
+        }
+    }
+
+    /**
      * Handle a login request to the application.
      *
      * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\RedirectResponse|\Illuminate\Http\Response|\Illuminate\Http\JsonResponse
      */
-        public function login(Request $request)
+    public function login(Request $request)
     {
-        //wipe session data
-    
+        // Wipe session data
         session()->flush();
+        
+        // This will now include CAPTCHA validation
         $this->validateLogin($request);
-    
+        
         // Debug the login attempt
         Log::info('Login attempt', [
             'email' => $request->email,
             'host' => $request->getHost()
         ]);
-    
+        
         // Check for too many login attempts
         if ($this->hasTooManyLoginAttempts($request)) {
             $this->fireLockoutEvent($request);

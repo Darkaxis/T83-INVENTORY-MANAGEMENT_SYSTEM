@@ -83,6 +83,7 @@
 
   <!-- CSS files -->
   <link href="{{ asset('assets/css/material-dashboard.css') }}" rel="stylesheet" />
+  <script src="https://www.google.com/recaptcha/api.js" async defer></script>
 </head>
 
 <body class="bg-gray-200">
@@ -138,6 +139,14 @@
                     <div class="text-danger text-xs mt-1">{{ $message }}</div>
                   @enderror
                   
+                  <!-- CAPTCHA -->
+                  <div class="form-group text-center my-4">
+                    <div class="g-recaptcha mx-auto d-inline-block" data-sitekey="{{ env('RECAPTCHA_SITE_KEY') }}"></div>
+                    @error('g-recaptcha-response')
+                      <div class="text-danger text-xs mt-1">{{ $message }}</div>
+                    @enderror
+                  </div>
+                  
                   <div class="form-check form-switch d-flex align-items-center mb-3">
                     <input class="form-check-input" type="checkbox" id="rememberMe" name="remember" checked>
                     <label class="form-check-label mb-0 ms-3" for="rememberMe">Remember me</label>
@@ -152,9 +161,7 @@
                     <span class="text-muted font-weight-bold">OR</span>
                   </div>
                   
-                  <a href="{{ route('login.google') }}" class="btn btn-outline-danger w-100 mb-2">
-                    <i class="fa fa-google me-2"></i> Sign in with Google
-                  </a>
+                  
                   <div class="container mt-5">
                     <div class="card">
                         <div class="card-body text-center">
