@@ -13,7 +13,6 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 use GuzzleHttp\Client;
 use ZipArchive;
-use App\Jobs\ProcessSystemUpdate;
 
 class UpdateController extends Controller
 {
@@ -70,8 +69,15 @@ class UpdateController extends Controller
      */
     public function update(SystemUpdateRequest $request)
     {
+        // Set timeout and memory limits for the update process
+        set_time_limit(0);
+        ini_set('memory_limit', '512M');
+        
         $currentVersion = config('app.version', '1.0.0');
         $newVersion = $request->version;
+        
+        // Log the start of the update process
+        Log::info("Starting system update from {$currentVersion} to {$newVersion}");
         
         // Create update record
         $update = SystemUpdate::create([
@@ -82,12 +88,46 @@ class UpdateController extends Controller
             'notes' => 'Update initiated from admin panel'
         ]);
         
-        // Dispatch the job (which will run in the background)
-        ProcessSystemUpdate::dispatch($update->id);
-        
-        // Redirect immediately with a message
-        return redirect()->route('admin.system.update')
-            ->with('success', "Update process has started in the background. You can check the status on this page.");
+        try {
+            // 1. Download the update
+            $zipPath = $this->downloadUpdate($newVersion);
+            
+            // 2. Backup current application
+            $backupPath = $this->backupCurrentSystem($currentVersion);
+            
+            // 3. Extract and apply update
+            $this->applyUpdate($zipPath, $newVersion);
+            
+            // 4. Run post-update tasks
+            $this->runPostUpdateTasks($newVersion);
+            
+            // Update record in database
+            $update->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'notes' => "Update successfully completed. System backup saved at: {$backupPath}"
+            ]);
+            
+            Log::info("System update to {$newVersion} completed successfully");
+            
+            return redirect()->route('admin.system.update')
+                ->with('success', "Successfully updated to version {$newVersion}!");
+                
+        } catch (\Exception $e) {
+            Log::error("Update failed: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            $update->update([
+                'status' => 'failed',
+                'error_message' => $e->getMessage(),
+                'notes' => "Update failed. Error: " . $e->getMessage()
+            ]);
+            
+            return redirect()->route('admin.system.update')
+                ->with('error', 'Update failed: ' . $e->getMessage());
+        }
     }
     
     /**
