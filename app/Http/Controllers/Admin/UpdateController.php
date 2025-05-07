@@ -239,7 +239,7 @@ class UpdateController extends Controller
     /**
      * Download the update package
      */
-    public function downloadUpdate($version)
+    protected function downloadUpdate($version)
     {
         Log::info("Downloading update v{$version}");
         
@@ -274,7 +274,7 @@ class UpdateController extends Controller
     /**
      * Backup the current system
      */
-    public function backupCurrentSystem($version)
+    protected function backupCurrentSystem($version)
     {
         Log::info("Backing up current system (v{$version})");
         
