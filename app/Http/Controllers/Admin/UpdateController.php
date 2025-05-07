@@ -238,6 +238,9 @@ class UpdateController extends Controller
     
     /**
      * Download the update package
+     *
+     * @param string $version The version to download
+     * @return string Path to the downloaded zip file
      */
     public function downloadUpdate($version)
     {
@@ -254,25 +257,36 @@ class UpdateController extends Controller
         list($owner, $repo) = explode('/', $this->githubRepo);
         $downloadUrl = "https://api.github.com/repos/{$owner}/{$repo}/zipball/v{$version}";
         
-        // Download the update package
-        $response = $this->client->get($downloadUrl, [
-            'sink' => $zipPath,
-            'headers' => [
-                'Authorization' => $this->githubToken ? "token {$this->githubToken}" : null
-            ]
-        ]);
-        
-        if (!file_exists($zipPath)) {
-            throw new \Exception("Failed to download update package");
+        try {
+            // Download the update package
+            Log::info("Downloading from: {$downloadUrl}");
+            $response = $this->client->get($downloadUrl, [
+                'sink' => $zipPath,
+                'headers' => [
+                    'Authorization' => $this->githubToken ? "token {$this->githubToken}" : null
+                ]
+            ]);
+            
+            if (!file_exists($zipPath)) {
+                throw new \Exception("Failed to download update package");
+            }
+            
+            Log::info("Update package downloaded successfully to {$zipPath}");
+            
+            return $zipPath;
+        } catch (\Exception $e) {
+            if (file_exists($zipPath)) {
+                unlink($zipPath); // Remove failed download
+            }
+            throw new \Exception("Download failed: " . $e->getMessage());
         }
-        
-        Log::info("Update package downloaded successfully");
-        
-        return $zipPath;
     }
-    
+
     /**
      * Backup the current system
+     *
+     * @param string $version Current version being backed up
+     * @return string Path to the backup file
      */
     public function backupCurrentSystem($version)
     {
@@ -336,13 +350,17 @@ class UpdateController extends Controller
         
         return $backupPath;
     }
-    
+
     /**
-     * Extract and apply the update
+     * Apply the update
+     *
+     * @param string $zipPath Path to the update zip file
+     * @param string $version New version being applied
+     * @return void
      */
     public function applyUpdate($zipPath, $version)
     {
-        Log::info("Extracting update package");
+        Log::info("Applying update package for v{$version}");
         
         $extractDir = storage_path("app/system-updates/extract-{$version}");
         if (!file_exists($extractDir)) {
@@ -386,11 +404,47 @@ class UpdateController extends Controller
         
         Log::info("Update files applied successfully");
     }
-    
+
+    /**
+     * Run post-update tasks
+     *
+     * @param string $version The new version
+     * @return void
+     */
+    public function runPostUpdateTasks($version)
+    {
+        Log::info("Running post-update tasks for v{$version}");
+        
+        // Clear all caches
+        try {
+            Artisan::call('cache:clear');
+            Artisan::call('config:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+            Log::info("Application caches cleared");
+        } catch (\Exception $e) {
+            Log::warning("Error clearing caches: " . $e->getMessage());
+        }
+        
+        // Run migrations
+        try {
+            Artisan::call('migrate', ['--force' => true]);
+            Log::info("Database migrations completed");
+        } catch (\Exception $e) {
+            Log::warning("Error running migrations: " . $e->getMessage());
+            // Don't throw an exception here - update may still be usable
+        }
+        
+        Log::info("Post-update tasks completed for v{$version}");
+    }
+
     /**
      * Find the source directory in extracted update package
+     * 
+     * @param string $extractDir
+     * @return string|null
      */
-    public function findSourceDirectory($extractDir)
+    protected function findSourceDirectory($extractDir)
     {
         $directories = glob($extractDir . '/*', GLOB_ONLYDIR);
         
@@ -401,7 +455,30 @@ class UpdateController extends Controller
         // GitHub usually creates a directory like "owner-repo-hash"
         return $directories[0];
     }
-    
+
+    /**
+     * Update version in config file
+     * 
+     * @param string $version
+     * @return void
+     */
+    protected function updateVersionInConfig($version)
+    {
+        config(['app.version' => $version]);
+        
+        $configPath = config_path('app.php');
+        $configContent = file_get_contents($configPath);
+        
+        // Replace the version string in the config file
+        $pattern = "/'version'\s*=>\s*'.*?'/";
+        $replacement = "'version' => '{$version}'";
+        $configContent = preg_replace($pattern, $replacement, $configContent);
+        
+        file_put_contents($configPath, $configContent);
+        
+        Log::info("Version updated in config to: {$version}");
+    }
+
     /**
      * Copy files from source to destination, excluding specific paths
      */
@@ -461,51 +538,4 @@ class UpdateController extends Controller
         
         rmdir($dir);
     }
-    
-    /**
-     * Update version in config file
-     */
-    public function updateVersionInConfig($version)
-    {
-        // This is just a basic implementation - in real world you might
-        // need to update an environment variable or config file
-        config(['app.version' => $version]);
-        
-        $configPath = config_path('app.php');
-        $configContent = file_get_contents($configPath);
-        
-        // Replace the version string in the config file
-        $pattern = "/'version'\s*=>\s*'.*?'/";
-        $replacement = "'version' => '{$version}'";
-        $configContent = preg_replace($pattern, $replacement, $configContent);
-        
-        file_put_contents($configPath, $configContent);
-    }
-    
-    /**
-     * Run post-update tasks
-     */
-    public function runPostUpdateTasks($version)
-    {
-        Log::info("Running post-update tasks for v{$version}");
-        
-        // Clear all caches
-        Artisan::call('cache:clear');
-        Artisan::call('config:clear');
-        Artisan::call('view:clear');
-        Artisan::call('route:clear');
-        
-        // Run migrations
-        try {
-            Artisan::call('migrate', ['--force' => true]);
-            Log::info("Database migrations completed");
-        } catch (\Exception $e) {
-            Log::warning("Error running migrations: " . $e->getMessage());
-            // Don't throw an exception here - update may still be usable
-        }
-        
-        Log::info("Post-update tasks completed");
-    }
-
-    
 }
