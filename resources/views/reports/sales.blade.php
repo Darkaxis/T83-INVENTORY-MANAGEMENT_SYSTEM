@@ -23,14 +23,7 @@
                 ]) }}" class="btn btn-sm btn-outline-primary">
                     <i class="fas fa-file-pdf me-2"></i>Export PDF
                 </a>
-                <a href="{{ route('reports.sales.export.csv', [
-                    'subdomain' => $store->slug,
-                    'start_date' => $startDate->format('Y-m-d'),
-                    'end_date' => $endDate->format('Y-m-d'),
-                    'group_by' => $groupBy
-                ]) }}" class="btn btn-sm btn-outline-primary">
-                    <i class="fas fa-file-csv me-2"></i>Export CSV
-                </a>
+               
             </div>
         </div>
     </div>

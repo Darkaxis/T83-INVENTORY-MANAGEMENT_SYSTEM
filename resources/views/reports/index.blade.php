@@ -6,6 +6,7 @@
 
 @section('content')
 <div class="container-fluid py-4">
+    
     <div class="row mb-4">
         <div class="col-lg-8">
             <h1 class="display-5 fw-bold text-primary">
@@ -49,7 +50,7 @@
                     <ul class="list-unstyled mb-4">
                         <li><i class="fas fa-check-circle text-success me-2"></i>Daily, weekly, or monthly breakdowns</li>
                         <li><i class="fas fa-check-circle text-success me-2"></i>Visual charts and graphs</li>
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Export to PDF or CSV</li>
+                      
                     </ul>
                     
                     <a href="{{ route('reports.sales', ['subdomain' => $store->slug]) }}" class="btn btn-primary w-100">
@@ -59,65 +60,7 @@
             </div>
         </div>
         
-        <!-- Product Performance Report Card -->
-        <div class="col-lg-4 mb-4">
-            <div class="card border-0 shadow-sm h-100 hover-elevation">
-                <div class="card-body p-4">
-                    <div class="feature-icon bg-gradient-success text-white rounded-circle mb-3">
-                        <i class="fas fa-box"></i>
-                    </div>
-                    
-                    <h4 class="card-title">Product Performance</h4>
-                    <p class="card-text text-muted">
-                        Identify your best and worst performing products to optimize your inventory.
-                    </p>
-                    
-                    <ul class="list-unstyled mb-4">
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Best and worst sellers</li>
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Profit margin analysis</li>
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Inventory turnover rates</li>
-                    </ul>
-                    
-                    <a href="{{ route('reports.products.export.csv', [
-                        'subdomain' => $store->slug,
-                        'start_date' => $startDate->format('Y-m-d'),
-                        'end_date' => $endDate->format('Y-m-d')
-                    ]) }}" class="btn btn-sm btn-outline-primary">
-                        <i class="fas fa-file-csv me-2"></i>Export Products CSV
-                    </a>
-                    
-                    <button class="btn btn-outline-secondary w-100" disabled>
-                        <i class="fas fa-clock me-2"></i>Coming Soon
-                    </button>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Cashier Performance Report Card -->
-        <div class="col-lg-4 mb-4">
-            <div class="card border-0 shadow-sm h-100 hover-elevation">
-                <div class="card-body p-4">
-                    <div class="feature-icon bg-gradient-warning text-white rounded-circle mb-3">
-                        <i class="fas fa-user-friends"></i>
-                    </div>
-                    
-                    <h4 class="card-title">Cashier Performance</h4>
-                    <p class="card-text text-muted">
-                        Track staff performance and sales productivity metrics.
-                    </p>
-                    
-                    <ul class="list-unstyled mb-4">
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Sales by employee</li>
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Average transaction value</li>
-                        <li><i class="fas fa-check-circle text-success me-2"></i>Transaction speed</li>
-                    </ul>
-                    
-                    <button class="btn btn-outline-secondary w-100" disabled>
-                        <i class="fas fa-clock me-2"></i>Coming Soon
-                    </button>
-                </div>
-            </div>
-        </div>
+    
     </div>
 </div>
 @endsection

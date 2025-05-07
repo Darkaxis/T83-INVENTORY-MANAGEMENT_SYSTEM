@@ -24,10 +24,13 @@ class ReportController extends Controller
     /**
      * Show the reports dashboard
      */
-    public function index(Request $request)
+    public function index()
     {
-        $store = $this->getCurrentStore($request);
-        return view('reports.index', compact('store'));
+        $store = request()->store;
+        $startDate = \Carbon\Carbon::now()->subDays(30);
+        $endDate = \Carbon\Carbon::now();
+        
+        return view('reports.index', compact('store', 'startDate', 'endDate'));
     }
     
     /**
