@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Schema;
 use GuzzleHttp\Client;
 use ZipArchive;
 use App\Jobs\ProcessSystemUpdate;
+use App\Jobs\RollbackSystemUpdate;
 
 class UpdateController extends Controller
 {
@@ -98,10 +99,6 @@ class UpdateController extends Controller
      */
     public function rollback(Request $request)
     {
-        // Prevent timeout for long-running operation
-        set_time_limit(0);
-        ini_set('memory_limit', '512M');
-        
         Log::info('Starting OTA update rollback process');
         
         try {
@@ -120,12 +117,11 @@ class UpdateController extends Controller
             });
             
             $backupFile = $backupFiles[0];
-            Log::info("Using backup file for rollback: {$backupFile}");
             
             // Extract version from backup filename
             preg_match('/backup-v(.+?)-/', basename($backupFile), $matches);
             $previousVersion = $matches[1] ?? 'unknown';
-            Log::info("Rolling back to version: {$previousVersion}");
+            Log::info("Initiating rollback to version: {$previousVersion}");
             
             // Create rollback record
             $update = SystemUpdate::create([
@@ -136,67 +132,15 @@ class UpdateController extends Controller
                 'notes' => 'Rollback to previous version initiated from admin panel'
             ]);
             
-            // Extract backup to temporary directory
-            $extractDir = storage_path('app/system-updates/rollback-temp');
-            if (file_exists($extractDir)) {
-                $this->deleteDirectory($extractDir);
-            }
-            mkdir($extractDir, 0755, true);
-            
-            $zip = new ZipArchive();
-            if ($zip->open($backupFile) !== true) {
-                throw new \Exception('Failed to open backup file.');
-            }
-            
-            Log::info("Extracting backup to: {$extractDir}");
-            $zip->extractTo($extractDir);
-            $zip->close();
-            
-            // Define exclusion patterns (same as during update)
-            $excludes = [
-                '.env',
-                'storage',
-                'vendor',
-                '.git',
-                'node_modules',
-                'storage/app/system-backups',
-                'storage/app/system-updates',
-                'storage/logs',
-                'bootstrap/cache',
-                '*.log'
-            ];
-            
-            // Copy files from backup to application root
-            $rootPath = base_path();
-            Log::info("Restoring files from backup to {$rootPath}");
-            $this->copyFiles($extractDir, $rootPath, $excludes);
-            
-            // Clean up
-            $this->deleteDirectory($extractDir);
-            
-            // Update version in config
-            $this->updateVersionInConfig($previousVersion);
-            
-            // Clear caches
-            Artisan::call('config:clear');
-            Artisan::call('cache:clear');
-            Artisan::call('view:clear');
-            Artisan::call('route:clear');
-            
-            $update->update([
-                'status' => 'completed',
-                'completed_at' => now(),
-                'notes' => "Rollback to version {$previousVersion} completed successfully."
-            ]);
-            
-            Log::info("Rollback to version {$previousVersion} completed successfully");
+            // Dispatch the job to run in the background
+            RollbackSystemUpdate::dispatch($update->id);
             
             return redirect()->route('admin.system.update')
-                ->with('success', "System successfully rolled back to version {$previousVersion}")
-                ->with('warning', 'Database schema changes were NOT rolled back. If needed, restore your database manually.');
+                ->with('success', "Rollback process has started in the background. You can check the status on this page.")
+                ->with('warning', 'Database schema changes will NOT be rolled back. If needed, restore your database manually.');
                 
         } catch (\Exception $e) {
-            Log::error("Rollback failed: " . $e->getMessage(), [
+            Log::error("Rollback initiation failed: " . $e->getMessage(), [
                 'exception' => $e,
                 'trace' => $e->getTraceAsString()
             ]);
@@ -517,25 +461,51 @@ class UpdateController extends Controller
     }
     
     /**
-     * Delete a directory and its contents
+     * Delete a directory and its contents recursively with improved empty dir handling
+     *
+     * @param string $dir
+     * @return bool
      */
     public function deleteDirectory($dir)
     {
-        if (!is_dir($dir)) {
-            return;
+        if (!file_exists($dir)) {
+            return true;
         }
         
-        $objects = scandir($dir);
-        foreach ($objects as $object) {
-            if ($object != "." && $object != "..") {
-                if (is_dir($dir . "/" . $object)) {
-                    $this->deleteDirectory($dir . "/" . $object);
-                } else {
-                    unlink($dir . "/" . $object);
+        if (!is_dir($dir)) {
+            return unlink($dir);
+        }
+        
+        // Safe directory handling using RecursiveDirectoryIterator
+        $it = new \RecursiveDirectoryIterator($dir, \RecursiveDirectoryIterator::SKIP_DOTS);
+        $files = new \RecursiveIteratorIterator($it, \RecursiveIteratorIterator::CHILD_FIRST);
+        
+        foreach ($files as $file) {
+            if ($file->isDir()) {
+                // For directories, try to delete them
+                if (!@rmdir($file->getRealPath())) {
+                    // If rmdir fails, try once more with improved permissions
+                    @chmod($file->getRealPath(), 0777);
+                    @rmdir($file->getRealPath());
+                }
+            } else {
+                // For files, try to delete them
+                if (!@unlink($file->getRealPath())) {
+                    // If unlink fails, try once more with improved permissions
+                    @chmod($file->getRealPath(), 0666);
+                    @unlink($file->getRealPath());
                 }
             }
         }
         
-        rmdir($dir);
+        // Try to delete the main directory
+        if (!@rmdir($dir)) {
+            // Last resort - try with permissions
+            @chmod($dir, 0777);
+            @rmdir($dir);
+        }
+        
+        // Return success based on whether directory still exists
+        return !is_dir($dir);
     }
 }

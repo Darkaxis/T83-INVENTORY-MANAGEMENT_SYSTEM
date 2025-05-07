@@ -64,24 +64,22 @@
                             <form action="{{ route('admin.system.update.process') }}" method="POST" onsubmit="return confirm('Are you sure you want to update the system to version {{ $latestRelease['version'] }}? This process cannot be undone.');">
                                 @csrf
                                 <input type="hidden" name="version" value="{{ $latestRelease['version'] }}">
-                                <button type="submit" class="btn btn-primary btn-block mb-3">
+                                <button type="submit" class="btn btn-primary btn-block">
                                     <i class="fas fa-download mr-1"></i> Update to v{{ $latestRelease['version'] }}
+                                </button>
+                            </form>
+                            
+                            <form action="{{ route('admin.system.update.rollback') }}" method="POST" 
+                                  onsubmit="return confirm('Are you sure you want to rollback to the previous version? This process cannot be undone and database changes will not be reverted.');">
+                                @csrf
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-history mr-1"></i> Rollback to Previous Version
                                 </button>
                             </form>
                         @else
                             <div class="alert alert-success">
                                 <i class="fas fa-check-circle mr-1"></i> Your system is up to date.
                             </div>
-                        @endif
-
-                        @if($updateHistory->count() > 0)
-                            <form action="{{ route('admin.system.update.rollback') }}" method="POST" 
-                                  onsubmit="return confirm('Are you sure you want to rollback to the previous version? This process cannot be undone and database changes will not be reverted.');">
-                                @csrf
-                                <button type="submit" class="btn btn-warning mt-3">
-                                    <i class="fas fa-history mr-1"></i> Rollback to Previous Version
-                                </button>
-                            </form>
                         @endif
                     @else
                         <div class="alert alert-warning">
