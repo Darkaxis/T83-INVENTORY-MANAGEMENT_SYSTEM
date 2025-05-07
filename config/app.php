@@ -123,5 +123,9 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
         
+    'version' => '1.2.3',
+'auto_update' => env('APP_AUTO_UPDATE', false),
+'auto_install_updates' => env('APP_AUTO_INSTALL_UPDATES', false),
+'update_check_url' => env('APP_UPDATE_CHECK_URL', 'https://api.github.com/repos/Darkaxis/T83-INVENTORY-MANAGEMENT_SYSTEM/releases/latest'),
 
 ];

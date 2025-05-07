@@ -12,6 +12,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
+use App\Http\Controllers\Admin\SystemUpdateController;
 use Illuminate\Support\Facades\DB;
 use App\Http\Controllers\Admin\TenantSettingsController;
 use Illuminate\Support\Facades\Log;
@@ -94,6 +95,16 @@ Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
     Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
 });
 
+Route::prefix('admin')->name('admin.')->group(function () {
+    // Other admin routes...
+    
+    Route::prefix('system')->name('system.')->group(function () {
+        Route::get('updates', [SystemUpdateController::class, 'index'])->name('updates');
+        Route::post('updates/check', [SystemUpdateController::class, 'check'])->name('updates.check');
+        Route::post('updates/{id}/download', [SystemUpdateController::class, 'download'])->name('updates.download');
+        Route::post('updates/{id}/install', [SystemUpdateController::class, 'install'])->name('updates.install');
+    });
+});
 
 Route::middleware(['web', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');

@@ -7,7 +7,6 @@ use App\Models\Store;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Tenant\Product;
-use App\Http\Requests\Checkout\ProcessCheckoutRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -108,13 +107,22 @@ class CheckoutController extends Controller
     /**
      * Process the checkout
      */
-    public function process(ProcessCheckoutRequest $request)
+    public function process(Request $request)
     {
         $store = $this->getCurrentStore($request);
         $this->databaseManager->switchToTenant($store);
         
-        // Validation is now handled by the form request class
-        $validated = $request->validated();
+        // Validate request
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.id' => 'required|exists:tenant.products,id',
+            'items.*.stock' => 'required|integer|min:1',
+            'payment_method' => 'required|in:cash,card,other',
+            'customer_name' => 'nullable|string|max:255',
+            'customer_email' => 'nullable|email',
+            'customer_phone' => 'nullable|string|max:20',
+            'notes' => 'nullable|string'
+        ]);
         
         DB::connection('tenant')->beginTransaction();
         
@@ -173,12 +181,12 @@ class CheckoutController extends Controller
                 'tax_amount' => $taxAmount,
                 'discount_amount' => 0,
                 'total_amount' => $totalAmount,
-                'payment_method' => $validated['payment_method'],  // Use validated data here
+                'payment_method' => $request->payment_method,
                 'payment_status' => 'completed',
-                'customer_name' => $validated['customer_name'] ?? null,  // Use validated data, make optional
-                'customer_email' => $validated['customer_email'] ?? null,  // Use validated data, make optional
-                'customer_phone' => $validated['customer_phone'] ?? null,  // Use validated data, make optional
-                'notes' => $validated['notes'] ?? null,  // Use validated data, make optional
+                'customer_name' => $request->customer_name,
+                'customer_email' => $request->customer_email,
+                'customer_phone' => $request->customer_phone,
+                'notes' => $request->notes,
             ]);
             
             $sale->save();
