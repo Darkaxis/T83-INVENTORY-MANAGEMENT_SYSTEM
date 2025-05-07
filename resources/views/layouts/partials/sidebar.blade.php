@@ -56,6 +56,31 @@
             <span class="nav-link-text ms-1">Stores</span>
           </a>
         </li>
+
+        <li class="nav-item">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('admin.deployment.*') ? 'active bg-light' : '' }}" href="{{ route('admin.deployment.rings') }}">
+            <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
+              <i class="fas fa-sync-alt text-dark"></i>
+            </div>
+            <span class="nav-link-text ms-1">System Updates</span>
+            @php
+              // Check for stores with pending updates
+              $pendingRingUpdates = \App\Models\DeploymentRing::where('auto_update', true)
+                  ->whereHas('stores')
+                  ->count();
+            @endphp
+            @if($pendingRingUpdates > 0)
+              <span class="badge rounded-pill bg-danger ms-auto">{{ $pendingRingUpdates }}</span>
+            @endif
+          </a>
+        </li>
+
+        <li class="nav-item ms-4">
+          <a class="nav-link text-dark {{ request()->routeIs('admin.deployment.rings') ? 'active bg-light' : '' }}" href="{{ route('admin.deployment.rings') }}">
+            <span class="nav-link-text">Deployment Rings</span>
+          </a>
+        </li>
+        
       
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold" href="#">

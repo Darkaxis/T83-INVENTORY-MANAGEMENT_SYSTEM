@@ -173,6 +173,50 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Add this to the settings page sidebar -->
+            <div class="card shadow-sm border-0 rounded-3 mt-4">
+                <div class="card-header bg-light py-3">
+                    <h6 class="mb-0 fw-bold"><i class="fas fa-code-branch me-2"></i>System Version</h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h5 class="mb-0">Currently Running</h5>
+                            <p class="text-muted mb-0">
+                                Version {{ $store->deploymentRing ? $store->deploymentRing->version : config('app.version') }}
+                            </p>
+                        </div>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                    
+                    @if($store->deploymentRing)
+                    <hr>
+                    <div class="mb-0">
+                        <span class="text-muted">Deployment Ring:</span>
+                        <span class="badge bg-info ms-2">{{ $store->deploymentRing->name }}</span>
+                        
+                        @if($store->deploymentRing->name === 'Insiders')
+                            <p class="small text-muted mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Your store receives early access to new features and updates.
+                            </p>
+                        @elseif($store->deploymentRing->name === 'Early Adopters')
+                            <p class="small text-muted mt-2">
+                                <i class="fas fa-info-circle me-1"></i>
+                                Your store receives updates after they've been verified with our Insiders group.
+                            </p>
+                        @endif
+                    </div>
+                    @endif
+                    
+                    @if($isProUser && !empty($pendingUpdates))
+                        <a href="#system-updates" class="btn btn-sm btn-outline-primary mt-3">
+                            <i class="fas fa-sync-alt me-1"></i> View Updates
+                        </a>
+                    @endif
+                </div>
+            </div>
         </div>
     </div>
 </div>

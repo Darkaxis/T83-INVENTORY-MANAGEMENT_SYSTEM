@@ -6,6 +6,7 @@
         @yield('breadcrumbs')
       </ol>
       <h6 class="font-weight-bolder mb-0">@yield('page-title', 'Inventory Management')</h6>
+        
     </nav>
   
   </div>

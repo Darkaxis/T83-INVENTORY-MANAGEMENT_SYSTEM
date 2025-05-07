@@ -20,6 +20,7 @@ use App\Http\Controllers\SubscriptionController;
 use App\Http\Controllers\Admin\PricingTierController;
 use App\Http\Controllers\StoreSettingsController;
 use App\Models\Store;
+use App\Http\Controllers\DeploymentRingController;
 use App\Http\Controllers\CheckoutController;
 use App\Http\Controllers\ReportController;
 
@@ -95,9 +96,20 @@ Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
     Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
 });
 
+Route::prefix('admin/deployment')->name('admin.deployment.')->middleware(['admin'])->group(function () {
+    Route::get('rings', [DeploymentRingController::class, 'index'])->name('rings');
+    Route::post('rings', [DeploymentRingController::class, 'storeRing'])->name('store-ring');
+    Route::post('move-store', [DeploymentRingController::class, 'moveStore'])->name('move-store');
+    Route::post('rings/{id}/stores', [DeploymentRingController::class, 'addStores'])->name('add-stores');
+    Route::post('rings/{id}/update', [DeploymentRingController::class, 'updateRing'])->name('update-ring');
+    Route::post('rings/{id}', [DeploymentRingController::class, 'updateRing'])->name('update-ring');
+    Route::post('updates/{id}/deploy', [DeploymentRingController::class, 'deployUpdate'])->name('deploy-update');
+});
+
+
 Route::prefix('admin')->name('admin.')->group(function () {
     // Other admin routes...
-    
+
     Route::prefix('system')->name('system.')->group(function () {
         Route::get('updates', [SystemUpdateController::class, 'index'])->name('updates');
         Route::post('updates/check', [SystemUpdateController::class, 'check'])->name('updates.check');
@@ -207,6 +219,12 @@ Route::domain('{subdomain}.inventory.test')->middleware(['web', 'tenant.check', 
         Route::get('/', [StoreSettingsController::class, 'index'])->name('index');
         Route::post('/', [StoreSettingsController::class, 'update'])->name('update');
     });
+    Route::post('/settings/check-updates', [StoreSettingsController::class, 'checkUpdates'])
+    ->name('settings.check-updates');
+Route::post('/settings/download-update/{id}', [StoreSettingsController::class, 'downloadUpdate'])
+    ->name('settings.download-update');
+Route::post('/settings/install-update/{id}', [StoreSettingsController::class, 'installUpdate'])
+    ->name('settings.install-update');
     
     // Reports - Pro tier only
     Route::prefix('reports')->name('reports.')->middleware(['subscription.tier:pro'])->group(function () {

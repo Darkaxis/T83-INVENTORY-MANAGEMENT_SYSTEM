@@ -17,6 +17,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(TenantDatabaseManager::class, function ($app) {
             return new TenantDatabaseManager();
         });
+
+        $this->app->singleton(
+            \Illuminate\Contracts\Console\Kernel::class,
+            \App\Console\Kernel::class
+        );
     }
 
     /**

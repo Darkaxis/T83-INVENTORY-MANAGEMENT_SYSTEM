@@ -2,10 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Services\GitHubReleaseService;
 use Illuminate\Console\Command;
-use GuzzleHttp\Client;
-use App\Models\SystemUpdate;
-use Illuminate\Support\Facades\Log;
+
 class CheckForUpdates extends Command
 {
     /**
@@ -20,48 +19,34 @@ class CheckForUpdates extends Command
      *
      * @var string
      */
-    protected $description = 'Command description';
+    protected $description = 'Check GitHub for new system updates';
 
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(GitHubReleaseService $githubService)
     {
-        $this->info('Checking for system updates...');
+        $this->info('Checking for updates...');
         
         try {
-            // Get the current version from your app
-            $currentVersion = config('app.version');
+            $count = $githubService->checkForUpdates();
             
-            // Query GitHub API for latest release
-            $client = new Client();
-            $response = $client->get(' https://api.github.com/repos/Darkaxis/T83-INVENTORY-MANAGEMENT_SYSTEM/releases/latest');
-            $latestRelease = json_decode($response->getBody(), true);
-            
-            $latestVersion = ltrim($latestRelease['tag_name'], 'v');
-            
-            if (version_compare($latestVersion, $currentVersion, '>')) {
-                // New version available
-                $this->info("New version available: {$latestVersion}");
-                
-                // Record the update in the database
-                SystemUpdate::create([
-                    'version' => $latestVersion,
-                    'status' => 'checking',
-                    'release_notes' => $latestRelease['body'],
-                    'checked_at' => now(),
-                ]);
-                
-                // If automatic updates are enabled, start the download
-                if (config('app.auto_update')) {
-                    $this->call('update:download', ['version' => $latestVersion]);
-                }
+            if ($count === 0) {
+                $this->info('No new updates found.');
             } else {
-                $this->info('System is up to date.');
+                $this->info("Found {$count} releases on GitHub.");
+                $this->info("New updates added to system.");
             }
+
+            if ($count > 0) {
+                $this->info("Processing new updates...");
+                $this->call('updates:process');
+            }
+            
+            return self::SUCCESS;
         } catch (\Exception $e) {
             $this->error('Error checking for updates: ' . $e->getMessage());
-            Log::error('Update check failed: ' . $e->getMessage());
+            return self::FAILURE;
         }
     }
 }

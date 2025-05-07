@@ -94,6 +94,19 @@ class Store extends Model
         return $this->belongsTo(PricingTier::class);
     }
 
+    public function deploymentRing()
+    {
+        return $this->belongsTo(DeploymentRing::class);
+    }
+
+    /**
+     * Helper method to get store's current version
+     */
+    public function getCurrentVersion()
+    {
+        return $this->deploymentRing?->version ?? config('app.version');
+    }
+
     /**
      * Check if store is within product limit
      */

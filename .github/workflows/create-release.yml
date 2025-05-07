@@ -2,7 +2,6 @@ name: Create Release
 
 on:
   push:
-    # Creates release when you push a version tag
     tags:
       - 'v*.*.*'
       - '[0-9]+.[0-9]+.[0-9]+'
@@ -24,22 +23,38 @@ jobs:
       - name: Install dependencies
         run: composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
 
+      - name: Debug directory structure
+        run: ls -la
+
       - name: Prepare release files
         run: |
-          # Remove development files
-          rm -rf .git .github .gitignore tests phpunit.xml
-          
           # Create tenant directory structure
           mkdir -p tenant/views tenant/assets tenant/migrations
           
-          # Move tenant-specific files to tenant directory
-          # Customize this based on your app structure:
-          cp -r resources/views/tenant/* tenant/views/
-          cp -r public/tenant-assets/* tenant/assets/
-          cp -r database/tenant-migrations/* tenant/migrations/
+          # Check and copy tenant-specific files if directories exist
+          if [ -d "resources/views/tenant" ]; then
+            cp -r resources/views/tenant/* tenant/views/ || echo "No files to copy from views"
+          fi
+          
+          if [ -d "public/tenant-assets" ]; then
+            cp -r public/tenant-assets/* tenant/assets/ || echo "No files to copy from assets"
+          fi
+          
+          if [ -d "database/tenant-migrations" ]; then
+            cp -r database/tenant-migrations/* tenant/migrations/ || echo "No files to copy from migrations"
+          else
+            # Fallback to regular migrations if tenant-specific ones don't exist
+            cp -r database/migrations tenant/migrations/ || echo "No migrations found"
+          fi
+          
+          # Create a simple version file
+          echo ${{ github.ref_name }} > tenant/version.txt
           
           # Create zip file
-          zip -r sourcecode.zip . -x "node_modules/*" "vendor/*" "storage/*"
+          zip -r sourcecode.zip . -x "node_modules/*" "vendor/*" "storage/*" ".git/*" ".github/*"
+          
+          # Verify zip was created
+          ls -la sourcecode.zip
 
       - name: Create Release
         id: create_release

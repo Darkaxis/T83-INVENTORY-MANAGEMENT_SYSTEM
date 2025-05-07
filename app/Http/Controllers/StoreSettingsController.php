@@ -6,6 +6,7 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Artisan;
 use App\Services\TenantDatabaseManager;
 use Illuminate\Support\Facades\Validator;
 
@@ -97,6 +98,95 @@ class StoreSettingsController extends Controller
         } catch (\Exception $e) {
             Log::error("Error updating store settings: {$e->getMessage()}");
             return redirect()->back()->with('error', 'There was a problem updating store settings.');
+        }
+    }
+
+    /**
+     * Check for system updates
+     */
+    public function checkUpdates(Request $request)
+    {
+        $store = $this->getCurrentStore($request);
+        
+        // Only allow Pro and above users to access this feature
+        if (!$store->subscription || !in_array($store->subscription->pricing_tier->name, ['Professional', 'Unlimited'])) {
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'System updates are available only for Professional and Unlimited plans.');
+        }
+        
+        try {
+            // Run update check
+            Artisan::call('app:check-for-updates');
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('success', 'System update check completed.');
+        } catch (\Exception $e) {
+            Log::error('Update check failed: ' . $e->getMessage());
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'Error checking for updates: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download an update
+     */
+    public function downloadUpdate(Request $request, $id)
+    {
+        $store = $this->getCurrentStore($request);
+        
+        // Only allow Pro and above users to access this feature
+        if (!$store->subscription || !in_array($store->subscription->pricing_tier->name, ['Professional', 'Unlimited'])) {
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'System updates are available only for Professional and Unlimited plans.');
+        }
+        
+        try {
+            $update = \App\Models\SystemUpdate::findOrFail($id);
+            
+            // Start update download
+            Artisan::call('update:download', [
+                'version' => $update->version
+            ]);
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('success', 'Update download initiated. This may take a few minutes.');
+        } catch (\Exception $e) {
+            Log::error('Update download failed: ' . $e->getMessage());
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'Error downloading update: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Install an update
+     */
+    public function installUpdate(Request $request, $id)
+    {
+        $store = $this->getCurrentStore($request);
+        
+        // Only allow Pro and above users to access this feature
+        if (!$store->subscription || !in_array($store->subscription->pricing_tier->name, ['Professional', 'Unlimited'])) {
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'System updates are available only for Professional and Unlimited plans.');
+        }
+        
+        try {
+            $update = \App\Models\SystemUpdate::findOrFail($id);
+            
+            // Start update installation
+            Artisan::call('update:install', [
+                'version' => $update->version
+            ]);
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('success', 'Update installation initiated. The system will be updated shortly.');
+        } catch (\Exception $e) {
+            Log::error('Update installation failed: ' . $e->getMessage());
+            
+            return redirect()->route('settings.index', ['subdomain' => $store->slug])
+                ->with('error', 'Error installing update: ' . $e->getMessage());
         }
     }
 }

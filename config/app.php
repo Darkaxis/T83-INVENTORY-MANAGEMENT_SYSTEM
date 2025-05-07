@@ -123,9 +123,17 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
         
-    'version' => '1.0.0',
+    'version' => '1.0.1',
 'auto_update' => env('APP_AUTO_UPDATE', false),
 'auto_install_updates' => env('APP_AUTO_INSTALL_UPDATES', false),
 'update_check_url' => env('APP_UPDATE_CHECK_URL', 'https://api.github.com/repos/Darkaxis/T83-INVENTORY-MANAGEMENT_SYSTEM/releases/latest'),
+'github_repository' => env('GITHUB_REPOSITORY', 'Darkaxis/T83-INVENTORY-MANAGEMENT_SYSTEM'),
+    
+// GitHub API token (optional but recommended to avoid rate limits)
+'github_token' => env('GITHUB_TOKEN'),
+
+// Update settings
+'auto_check_updates' => env('AUTO_CHECK_UPDATES', true),
+'update_check_interval' => env('UPDATE_CHECK_INTERVAL', 86400), // 24 hours
 
 ];

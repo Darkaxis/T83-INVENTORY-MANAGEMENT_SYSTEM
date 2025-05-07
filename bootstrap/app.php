@@ -53,7 +53,11 @@ return Application::configure(basePath: dirname(__DIR__))
         \App\Console\Commands\TestGmail::class,
         \App\Console\Commands\SeedTenantProducts::class,
         \App\Console\Commands\SetupDemoStore::class,
-      
+        \App\Console\Commands\CheckForUpdates::class,
+        \App\Console\Commands\DeployPendingUpdates::class,
+        \App\Console\Commands\TestGitHubFetch::class,
+        \App\Console\Commands\ProcessPendingUpdates::class, // Add this line
+        \App\Console\Commands\StoreUpdate::class, // Add this line
     ])
     //aliases
 
