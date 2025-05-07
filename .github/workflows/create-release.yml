@@ -2,8 +2,10 @@ name: Create Release
 
 on:
   push:
+    # Creates release when you push a version tag
     tags:
-      - 'v*'  # This workflow triggers when you push a tag that starts with "v"
+      - 'v*.*.*'
+      - '[0-9]+.[0-9]+.[0-9]+'
 
 jobs:
   build:
@@ -11,43 +13,40 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
-        
-      - name: Set version
-        id: version
-        run: echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-      
-      - name: Create version info file
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: mbstring, dom, zip
+          tools: composer:v2
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-dev --optimize-autoloader --no-interaction
+
+      - name: Prepare release files
         run: |
-          echo '{
-            "version": "${{ steps.version.outputs.version }}",
-            "php_version": "8.1.0",
-            "mysql_version": "8.0.0",
-            "release_date": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
-          }' > version.json
-      
-      - name: Create update ZIP
-        run: |
-          mkdir -p update-v${{ steps.version.outputs.version }}
+          # Remove development files
+          rm -rf .git .github .gitignore tests phpunit.xml
           
-          # Copy required directories for update
-          cp -r app update-v${{ steps.version.outputs.version }}/
-          cp -r config update-v${{ steps.version.outputs.version }}/
-          cp -r database/migrations update-v${{ steps.version.outputs.version }}/database/
-          cp -r resources update-v${{ steps.version.outputs.version }}/
-          cp -r routes update-v${{ steps.version.outputs.version }}/
-          cp version.json update-v${{ steps.version.outputs.version }}/
+          # Create tenant directory structure
+          mkdir -p tenant/views tenant/assets tenant/migrations
           
-          # Create the ZIP file
-          zip -r update-v${{ steps.version.outputs.version }}.zip update-v${{ steps.version.outputs.version }}
-      
+          # Move tenant-specific files to tenant directory
+          # Customize this based on your app structure:
+          cp -r resources/views/tenant/* tenant/views/
+          cp -r public/tenant-assets/* tenant/assets/
+          cp -r database/tenant-migrations/* tenant/migrations/
+          
+          # Create zip file
+          zip -r sourcecode.zip . -x "node_modules/*" "vendor/*" "storage/*"
+
       - name: Create Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          name: Version ${{ steps.version.outputs.version }}
+          files: ./sourcecode.zip
+          name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          body_path: CHANGELOG.md  # Optional: Include release notes from CHANGELOG.md
-          files: |
-            update-v${{ steps.version.outputs.version }}.zip
-            version.json
+          token: ${{ secrets.GITHUB_TOKEN }}
