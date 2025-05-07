@@ -546,4 +546,6 @@ class UpdateController extends Controller
         
         Log::info("Post-update tasks completed");
     }
+
+    
 }

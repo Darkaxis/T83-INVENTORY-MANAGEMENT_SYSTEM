@@ -97,15 +97,15 @@ Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
 
 Route::prefix('system')->name('admin.system.')->middleware([ 'admin'])->group(function () {
     // Updates listing page
-    Route::get('/updates', [App\Http\Controllers\Admin\UpdateController::class, 'index'])->name('updates');
+    Route::get('/updates', [App\Http\Controllers\Admin\UpdateController::class, 'index'])->name('update');
     
     // Check for updates
-    Route::post('/updates/check', [App\Http\Controllers\Admin\UpdateController::class, 'check'])->name('updates.check');
+    Route::post('/updates/check', [App\Http\Controllers\Admin\UpdateController::class, 'checkForUpdates'])->name('updates.check');
     
     // Download specific update
     Route::post('/updates/{id}/download', [App\Http\Controllers\Admin\UpdateController::class, 'download'])->name('updates.download');
     
-    Route::post('/updates/process', [App\Http\Controllers\Admin\UpdateController::class, 'update'])->name('updates.process');
+    Route::post('/updates/process', [App\Http\Controllers\Admin\UpdateController::class, 'update'])->name('update.process');
     
     // Install specific update
     Route::post('/updates/{id}/install', [App\Http\Controllers\Admin\UpdateController::class, 'install'])->name('updates.install');
