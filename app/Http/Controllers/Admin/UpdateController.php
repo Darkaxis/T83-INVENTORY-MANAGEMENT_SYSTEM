@@ -131,6 +131,122 @@ class UpdateController extends Controller
     }
     
     /**
+     * Rollback to the previous version
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function rollback(Request $request)
+    {
+        // Prevent timeout for long-running operation
+        set_time_limit(0);
+        ini_set('memory_limit', '512M');
+        
+        Log::info('Starting OTA update rollback process');
+        
+        try {
+            // Find latest backup file
+            $backupDir = storage_path('app/system-backups');
+            $backupFiles = glob($backupDir . "/backup-v*.zip");
+            
+            if (empty($backupFiles)) {
+                return redirect()->route('admin.system.updates')
+                    ->with('error', 'No backup files found for rollback.');
+            }
+            
+            // Sort by modification time (newest first)
+            usort($backupFiles, function($a, $b) {
+                return filemtime($b) - filemtime($a);
+            });
+            
+            $backupFile = $backupFiles[0];
+            Log::info("Using backup file for rollback: {$backupFile}");
+            
+            // Extract version from backup filename
+            preg_match('/backup-v(.+?)-/', basename($backupFile), $matches);
+            $previousVersion = $matches[1] ?? 'unknown';
+            Log::info("Rolling back to version: {$previousVersion}");
+            
+            // Create rollback record
+            $update = SystemUpdate::create([
+                'version_from' => config('app.version', '1.0.0'),
+                'version_to' => $previousVersion,
+                'requested_by' => 1,
+                'status' => 'processing',
+                'notes' => 'Rollback to previous version initiated from admin panel'
+            ]);
+            
+            // Extract backup to temporary directory
+            $extractDir = storage_path('app/system-updates/rollback-temp');
+            if (file_exists($extractDir)) {
+                $this->deleteDirectory($extractDir);
+            }
+            mkdir($extractDir, 0755, true);
+            
+            $zip = new ZipArchive();
+            if ($zip->open($backupFile) !== true) {
+                throw new \Exception('Failed to open backup file.');
+            }
+            
+            Log::info("Extracting backup to: {$extractDir}");
+            $zip->extractTo($extractDir);
+            $zip->close();
+            
+            // Define exclusion patterns (same as during update)
+            $excludes = [
+                '.env',
+                'storage',
+                'vendor',
+                '.git',
+                'node_modules',
+                'storage/app/system-backups',
+                'storage/app/system-updates',
+                'storage/logs',
+                'bootstrap/cache',
+                '*.log'
+            ];
+            
+            // Copy files from backup to application root
+            $rootPath = base_path();
+            Log::info("Restoring files from backup to {$rootPath}");
+            $this->copyFiles($extractDir, $rootPath, $excludes);
+            
+            // Clean up
+            $this->deleteDirectory($extractDir);
+            
+            // Update version in config
+            $this->updateVersionInConfig($previousVersion);
+            
+            // Clear caches
+            Artisan::call('config:clear');
+            Artisan::call('cache:clear');
+            Artisan::call('view:clear');
+            Artisan::call('route:clear');
+            
+            $update->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'notes' => "Rollback to version {$previousVersion} completed successfully."
+            ]);
+            
+            Log::info("Rollback to version {$previousVersion} completed successfully");
+            
+            return redirect()->route('admin.system.updates')
+                ->with('success', "System successfully rolled back to version {$previousVersion}")
+                ->with('warning', 'Database schema changes were NOT rolled back. If needed, restore your database manually.');
+                
+        } catch (\Exception $e) {
+            Log::error("Rollback failed: " . $e->getMessage(), [
+                'exception' => $e,
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('admin.system.updates')
+                ->with('error', 'Rollback failed: ' . $e->getMessage());
+        }
+    }
+    
+    /**
      * Check the latest release from GitHub
      */
     protected function checkLatestRelease()

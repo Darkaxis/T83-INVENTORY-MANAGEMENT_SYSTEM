@@ -24,7 +24,7 @@
             <div class="card shadow mb-4">
                 <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                     <h6 class="m-0 font-weight-bold text-primary">Current System</h6>
-                    <form action="{{ route('admin.system.update.check') }}" method="POST">
+                    <form action="{{ route('admin.system.updates.check') }}" method="POST">
                         @csrf
                         <button type="submit" class="btn btn-sm btn-primary">
                             <i class="fas fa-sync-alt mr-1"></i> Check for Updates
@@ -65,6 +65,14 @@
                                 <input type="hidden" name="version" value="{{ $latestRelease['version'] }}">
                                 <button type="submit" class="btn btn-primary btn-block">
                                     <i class="fas fa-download mr-1"></i> Update to v{{ $latestRelease['version'] }}
+                                </button>
+                            </form>
+                            
+                            <form action="{{ route('admin.system.update.rollback') }}" method="POST" 
+                                  onsubmit="return confirm('Are you sure you want to rollback to the previous version? This process cannot be undone and database changes will not be reverted.');">
+                                @csrf
+                                <button type="submit" class="btn btn-warning">
+                                    <i class="fas fa-history mr-1"></i> Rollback to Previous Version
                                 </button>
                             </form>
                         @else
