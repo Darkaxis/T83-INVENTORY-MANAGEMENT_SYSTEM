@@ -365,25 +365,63 @@ class ProcessSystemUpdate implements ShouldQueue
     }
 
     /**
-     * Delete a directory and its contents
+     * Delete a directory and its contents recursively
+     *
+     * @param string $dir The directory to delete
+     * @return bool True on success
      */
     protected function deleteDirectory($dir)
     {
-        if (!is_dir($dir)) {
-            return;
+        if (!file_exists($dir)) {
+            return true;
         }
         
-        $objects = scandir($dir);
-        foreach ($objects as $object) {
-            if ($object != "." && $object != "..") {
-                if (is_dir($dir . "/" . $object)) {
-                    $this->deleteDirectory($dir . "/" . $object);
+        if (!is_dir($dir)) {
+            return unlink($dir);
+        }
+        
+        // Ensure trailing slash
+        $dir = rtrim($dir, '/\\') . DIRECTORY_SEPARATOR;
+        
+        // Use a DirectoryIterator to avoid issues with open file handles
+        try {
+            $items = new \DirectoryIterator($dir);
+            foreach ($items as $item) {
+                if ($item->isDot()) {
+                    continue;
+                }
+                
+                $path = $dir . $item->getFilename();
+                
+                if ($item->isDir()) {
+                    $this->deleteDirectory($path);
                 } else {
-                    unlink($dir . "/" . $object);
+                    // For files that can't be deleted immediately, try force-closing any handles
+                    if (file_exists($path) && !@unlink($path)) {
+                        // Handle Windows-specific issues with locked files
+                        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+                            // Try to release file lock using system call
+                            @chmod($path, 0777);
+                            if (file_exists($path)) {
+                                @unlink($path);
+                            }
+                        }
+                    }
                 }
             }
+            
+            // Try to delete the directory now that it should be empty
+            @rmdir($dir);
+            
+            // Double-check if directory still exists
+            if (is_dir($dir)) {
+                Log::warning("Could not fully remove directory: {$dir}");
+            }
+            
+            return !is_dir($dir);
+        } catch (\Exception $e) {
+            Log::error("Error deleting directory {$dir}: " . $e->getMessage());
+            return false;
         }
-        
-        rmdir($dir);
     }
 }
