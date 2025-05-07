@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Store;
 use Illuminate\Http\Request;
+use App\Http\Requests\Staff\StoreStaffRequest;
+use App\Http\Requests\Staff\UpdateStaffRequest;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -12,6 +14,7 @@ use App\Services\TenantDatabaseManager;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use App\Mail\WelcomeStaffMail;
+
 class StaffController extends Controller
 {
     protected $databaseManager;
@@ -89,60 +92,34 @@ class StaffController extends Controller
     /**
      * Store a newly created staff member in storage.
      */
-    public function store(Request $request)
+    public function store(StoreStaffRequest $request)
     {
         $store = $this->getCurrentStore($request);
         
-        // Validate the request
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'role' => 'required|in:manager,staff',
-        ]);
+        // Validation is handled by the form request
+        $validated = $request->validated();
         
         // Switch to tenant database
         $this->databaseManager->switchToTenant($store);
         
         try {
-            // Check if email already exists
-            $emailExists = DB::connection('tenant')->table('users')
-                ->where('email', $request->email)
-                ->exists();
-            
-            if ($emailExists) {
-                $this->databaseManager->switchToMain();
-                return redirect()->back()
-                    ->with('error', 'This email is already registered.')
-                    ->withInput();
-            }
-            
-            // Check user limit
-            $userLimit = $store->pricingTier->user_limit ?? 0;
-            $unlimited = $userLimit === null || $userLimit === -1;
-            $currentCount = DB::connection('tenant')->table('users')->count();
-            
-            if (!$unlimited && $currentCount >= $userLimit) {
-                $this->databaseManager->switchToMain();
-                return redirect()->route('staff.index', ['subdomain' => $store->slug])
-                    ->with('error', 'You have reached the staff limit for your current plan. Please upgrade to add more staff.');
-            }
-            
             // Generate a password
             $password = Str::random(10);
             
             // Create new user
             $userId = DB::connection('tenant')->table('users')->insertGetId([
-                'name' => $request->name,
-                'email' => $request->email,
+                'name' => $validated['name'],
+                'email' => $validated['email'],
                 'password' => Hash::make($password),
-                'role' => $request->role,
-               
+                'role' => $validated['role'],
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
             
             $this->databaseManager->switchToMain();
             
-             
-            Mail::to($request->email)->send(new WelcomeStaffMail($store, $password));
+            // Send welcome email
+            Mail::to($validated['email'])->send(new WelcomeStaffMail($store, $password));
             
             return redirect()->route('staff.index', ['subdomain' => $store->slug])
                 ->with('success', "Staff added successfully! Temporary password: {$password}");
@@ -190,42 +167,25 @@ class StaffController extends Controller
     /**
      * Update the specified staff member in storage.
      */
-    public function update(Request $request, $subdomain, $staff_id)
+    public function update(UpdateStaffRequest $request, $subdomain, $staff_id)
     {
         $store = $this->getCurrentStore($request);
         
-        // Validate the request
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255',
-            'role' => 'required|in:manager,staff',
-        ]);
+        // Validation is handled by the form request
+        $validated = $request->validated();
         
         // Switch to tenant database
         $this->databaseManager->switchToTenant($store);
         
         try {
-            // Check if email exists for other users
-            $emailExists = DB::connection('tenant')->table('users')
-                ->where('email', $request->email)
-                ->where('id', '!=', $staff_id)
-                ->exists();
-            
-            if ($emailExists) {
-                $this->databaseManager->switchToMain();
-                return redirect()->back()
-                    ->with('error', 'This email is already used by another user.')
-                    ->withInput();
-            }
-            
             // Update user
             DB::connection('tenant')->table('users')
                 ->where('id', $staff_id)
                 ->update([
-                    'name' => $request->name,
-                    'email' => $request->email,
-                    'role' => $request->role,
-                    'is_active' => $request->has('is_active'),
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'role' => $validated['role'],
+                    'is_active' => $request->$validated['is_active'] ,
                     'updated_at' => now(),
                 ]);
             

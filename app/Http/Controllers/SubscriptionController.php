@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\PricingTier;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use App\Http\Requests\Subscription\UpgradeSubscriptionRequest;
 
 class SubscriptionController extends Controller
 {
@@ -16,20 +17,20 @@ class SubscriptionController extends Controller
         return view('tenant.subscription.index', compact('store', 'availableTiers'));
     }
     
-    public function upgrade(Request $request, $subdomain)
+    public function upgrade(UpgradeSubscriptionRequest $request, $subdomain)
     {
         $store = Store::where('slug', $subdomain)->firstOrFail();
         
-        $request->validate([
-            'pricing_tier_id' => 'required|exists:pricing_tiers,id',
-        ]);
+        // Validation is now handled by the form request class
+        $validated = $request->validated();
         
-        $newTier = PricingTier::findOrFail($request->pricing_tier_id);
+        $newTier = PricingTier::findOrFail($validated['pricing_tier_id']);
         
         // Here you would implement payment processing
         // For now, just update the store with the new tier
         $store->update([
             'pricing_tier_id' => $newTier->id,
+            'billing_cycle' => $validated['billing_cycle'] ?? $store->billing_cycle,
             'subscription_start_date' => now(),
             'subscription_end_date' => $store->billing_cycle === 'monthly' ? 
                 now()->addMonth() : now()->addYear(),

@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\PricingTier\StorePricingTierRequest;
+use App\Http\Requests\Admin\PricingTier\UpdatePricingTierRequest;
 use App\Models\PricingTier;
 use Illuminate\Http\Request;
 
@@ -28,33 +30,24 @@ class PricingTierController extends Controller
     /**
      * Store a newly created pricing tier in storage.
      */
-    public function store(Request $request)
+    public function store(StorePricingTierRequest $request)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'monthly_price' => 'required|numeric|min:0',
-            'annual_price' => 'nullable|numeric|min:0',
-            'product_limit' => 'nullable|integer|min:-1',
-            'user_limit' => 'nullable|integer|min:-1',
-            'is_active' => 'boolean',
-            'features' => 'nullable|array',
-            'sort_order' => 'integer|min:0',
-        ]);
-
+        // Validation is automatically handled by the request class
+        $validated = $request->validated();
+        
         // Convert features array to JSON
-        $features = $request->features ?? [];
+        $features = $validated['features'] ?? [];
         
         PricingTier::create([
-            'name' => $request->name,
-            'description' => $request->description,
-            'monthly_price' => $request->monthly_price,
-            'annual_price' => $request->annual_price,
-            'product_limit' => $request->product_limit,
-            'user_limit' => $request->user_limit,
-            'is_active' => $request->is_active ?? false,
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'monthly_price' => $validated['monthly_price'],
+            'annual_price' => $validated['annual_price'],
+            'product_limit' => $validated['product_limit'],
+            'user_limit' => $validated['user_limit'],
+            'is_active' => $validated['is_active'] ?? false,
             'features_json' => $features,
-            'sort_order' => $request->sort_order ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
         ]);
 
         return redirect()->route('admin.pricing-tiers.index')
@@ -72,33 +65,23 @@ class PricingTierController extends Controller
     /**
      * Update the specified pricing tier in storage.
      */
-    public function update(Request $request, PricingTier $pricingTier)
+    public function update(UpdatePricingTierRequest $request, PricingTier $pricingTier)
     {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'monthly_price' => 'required|numeric|min:0',
-            'annual_price' => 'nullable|numeric|min:0',
-            'product_limit' => 'nullable|integer|min:-1',
-            'user_limit' => 'nullable|integer|min:-1',
-            'is_active' => 'boolean',
-            'features' => 'nullable|array',
-            'sort_order' => 'integer|min:0',
-        ]);
-
+        $validated = $request->validated();
+        
         // Convert features array to JSON
-        $features = $request->features ?? [];
+        $features = $validated['features'] ?? [];
         
         $pricingTier->update([
-            'name' => $request->name,
-            'description' => $request->description,
-            'monthly_price' => $request->monthly_price,
-            'annual_price' => $request->annual_price,
-            'product_limit' => $request->product_limit,
-            'user_limit' => $request->user_limit,
-            'is_active' => $request->is_active ?? false,
+            'name' => $validated['name'],
+            'description' => $validated['description'],
+            'monthly_price' => $validated['monthly_price'],
+            'annual_price' => $validated['annual_price'],
+            'product_limit' => $validated['product_limit'],
+            'user_limit' => $validated['user_limit'],
+            'is_active' => $validated['is_active'] ?? false,
             'features_json' => $features,
-            'sort_order' => $request->sort_order ?? 0,
+            'sort_order' => $validated['sort_order'] ?? 0,
         ]);
 
         return redirect()->route('admin.pricing-tiers.index')

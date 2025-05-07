@@ -7,7 +7,9 @@ use App\Models\Store;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
+use App\Http\Requests\Staff\StoreStaffMemberRequest;
+use App\Http\Requests\Staff\UpdateStaffMemberRequest;
+use App\Http\Requests\Staff\UpdateStaffPasswordRequest;
 
 class StoreStaffController extends Controller
 {
@@ -58,8 +60,6 @@ class StoreStaffController extends Controller
         return view('stores.staff.index', compact('store', 'staff'));
     }
 
-    // Update all other methods to use $this->getStore($request) instead of $request->store
-
     /**
      * Show the form for creating a new staff member.
      */
@@ -72,19 +72,12 @@ class StoreStaffController extends Controller
     /**
      * Store a newly created staff member in storage.
      */
-    public function store(Request $request)
+    public function store(StoreStaffMemberRequest $request)
     {
         $store = $this->getStore($request);
         
-        // Rest of the method remains the same
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
-            'role' => ['required', 'string', Rule::in(['manager', 'staff'])],
-            'phone' => 'nullable|string|max:20',
-            'position' => 'nullable|string|max:100',
-        ]);
+        // Validation is now handled by the form request
+        $validated = $request->validated();
         
         // Create new user with store association
         $user = new User();
@@ -92,8 +85,8 @@ class StoreStaffController extends Controller
         $user->email = $validated['email'];
         $user->password = Hash::make($validated['password']);
         $user->role = $validated['role'];
-        $user->phone = $request->phone;
-        $user->position = $request->position;
+        $user->phone = $validated['phone'] ?? null;
+        $user->position = $validated['position'] ?? null;
         $user->store_id = $store->id;
         $user->save();
         
@@ -101,9 +94,64 @@ class StoreStaffController extends Controller
             ->with('success', 'Staff member created successfully');
     }
 
-    // Update all other methods similarly
-    // For example:
+    /**
+     * Display the specified resource.
+     */
+    public function show(Request $request, $id)
+    {
+        $store = $this->getStore($request);
+        $staff = User::where('id', $id)
+                    ->where('store_id', $store->id)
+                    ->firstOrFail();
+                    
+        return view('stores.staff.show', compact('store', 'staff'));
+    }
 
+    /**
+     * Show the form for editing the specified resource.
+     */
+    public function edit(Request $request, $id)
+    {
+        $store = $this->getStore($request);
+        $staff = User::where('id', $id)
+                    ->where('store_id', $store->id)
+                    ->firstOrFail();
+                    
+        return view('stores.staff.edit', compact('store', 'staff'));
+    }
+
+    /**
+     * Update the specified resource in storage.
+     */
+    public function update(UpdateStaffMemberRequest $request, $id)
+    {
+        $store = $this->getStore($request);
+        $staff = User::where('id', $id)
+                    ->where('store_id', $store->id)
+                    ->firstOrFail();
+        
+        // Validation is now handled by the form request
+        $validated = $request->validated();
+        
+        $staff->name = $validated['name'];
+        $staff->email = $validated['email'];
+        $staff->role = $validated['role'];
+        $staff->phone = $validated['phone'] ?? $staff->phone;
+        $staff->position = $validated['position'] ?? $staff->position;
+        
+        if (isset($validated['status'])) {
+            $staff->status = $validated['status'];
+        }
+        
+        $staff->save();
+        
+        return redirect()->route('staff.show', ['id' => $staff->id, 'store_id' => $store->id])
+            ->with('success', 'Staff member updated successfully');
+    }
+
+    /**
+     * Show form to reset password.
+     */
     public function resetPassword(Request $request, $id)
     {
         $store = $this->getStore($request);
@@ -114,21 +162,45 @@ class StoreStaffController extends Controller
         return view('stores.staff.reset-password', compact('store', 'staff'));
     }
     
-    public function updatePassword(Request $request, $id)
+    /**
+     * Update the staff member's password.
+     */
+    public function updatePassword(UpdateStaffPasswordRequest $request, $id)
     {
         $store = $this->getStore($request);
         $staff = User::where('id', $id)
                      ->where('store_id', $store->id)
                      ->firstOrFail();
         
-        $validated = $request->validate([
-            'password' => 'required|string|min:8|confirmed',
-        ]);
+        // Validation is handled by the form request
+        $validated = $request->validated();
         
         $staff->password = Hash::make($validated['password']);
         $staff->save();
         
         return redirect()->route('staff.show', ['id' => $staff->id, 'store_id' => $store->id])
             ->with('success', 'Password updated successfully');
+    }
+
+    /**
+     * Remove the specified resource from storage.
+     */
+    public function destroy(Request $request, $id)
+    {
+        $store = $this->getStore($request);
+        $staff = User::where('id', $id)
+                    ->where('store_id', $store->id)
+                    ->firstOrFail();
+        
+        // Prevent deleting yourself
+        if (Auth::id() == $staff->id) {
+            return redirect()->back()
+                ->with('error', 'You cannot delete your own account');
+        }
+        
+        $staff->delete();
+        
+        return redirect()->route('staff.index', ['store_id' => $store->id])
+            ->with('success', 'Staff member deleted successfully');
     }
 }

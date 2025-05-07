@@ -4,10 +4,11 @@ namespace App\Http\Controllers;
 use App\Models\Product;
 use App\Models\Store;
 use Illuminate\Http\Request;
+use App\Http\Requests\Product\StoreProductRequest;
+use App\Http\Requests\Product\UpdateProductRequest;
 use App\Services\TenantDatabaseManager;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
-
 
 class ProductController extends Controller
 {
@@ -155,26 +156,16 @@ class ProductController extends Controller
     /**
      * Store a newly created product in storage.
      */
-    public function store(Request $request)
+    public function store(StoreProductRequest $request)
     {
         $store = $this->getCurrentStore($request);
         
-        // Connect to tenant database BEFORE validation
+        // Connect to tenant database
         $this->databaseManager->switchToTenant($store);
         
         try {
-            
-            // Validate data after connecting to tenant database
-            $validatedData = $request->validate([
-                'name' => 'required|string|max:255',
-                'sku' => 'required|string|max:255|unique:products,sku', // No tenant. prefix needed now
-                'price' => 'required|numeric|min:0',
-                'stock' => 'required|integer|min:0',
-                'description' => 'nullable|string',
-                'barcode' => 'nullable|string|max:100',
-                'category_id' => 'nullable', // No tenant. prefix needed now
-                'status' => 'sometimes|boolean',
-            ]);
+            // Validation is automatically handled by the request class
+            $validatedData = $request->validated();
             
             // Double-check product limit in a transaction to handle race conditions
             DB::connection('tenant')->beginTransaction();
@@ -195,7 +186,6 @@ class ProductController extends Controller
                     ->with('error', 'Product limit reached. Please upgrade your plan to add more products.');
             }
             
-           
             // Prepare product data
             $productData = [
                 'name' => $validatedData['name'],
@@ -367,7 +357,7 @@ class ProductController extends Controller
     /**
      * Update the specified product in storage.
      */
-    public function update(Request $request, $subdomain, $product_id)
+    public function update(UpdateProductRequest $request, $subdomain, $product_id)
     {
         $store = Store::where('slug', $subdomain)->firstOrFail();
         
@@ -381,17 +371,8 @@ class ProductController extends Controller
             abort(404);
         }
         
-        // Updated validation rules to include category_id and other fields
-        $validatedData = $request->validate([
-            'name' => 'required|string|max:255',
-            'sku' => 'required|string|max:100',
-            'price' => 'required|numeric|min:0',
-            'stock' => 'required|integer|min:0',
-            'description' => 'nullable|string',
-            'barcode' => 'required|string|max:100',
-            'category_id' => 'nullable|integer|exists:tenant.categories,id', // Added validation for category
-            'status' => 'sometimes|boolean',
-        ]);
+        // Validation is automatically handled by the request class
+        $validatedData = $request->validated();
         
         try {
             // Prepare full product data with all fields
