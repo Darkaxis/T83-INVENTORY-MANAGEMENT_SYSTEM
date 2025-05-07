@@ -104,7 +104,7 @@ Route::prefix('/system')->name('admin.system.')->middleware([ 'admin'])->group(f
     
     // Download specific update
     Route::post('/updates/{id}/download', [App\Http\Controllers\Admin\UpdateController::class, 'download'])->name('updates.download');
-    
+    Route::post('/updates/process', [App\Http\Controllers\Admin\UpdateController::class, 'update'])->name('updates.process');
     // Install specific update
     Route::post('/updates/{id}/install', [App\Http\Controllers\Admin\UpdateController::class, 'install'])->name('updates.install');
     
