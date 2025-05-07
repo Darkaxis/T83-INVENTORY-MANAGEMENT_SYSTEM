@@ -56,15 +56,16 @@
             <span class="nav-link-text ms-1">Stores</span>
           </a>
         </li>
-      
         <li class="nav-item">
-          <a class="nav-link text-dark font-weight-bold" href="#">
+          <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('admmin.system*') ? 'active bg-light' : '' }}" href="{{ route('admin.system.update') }}">
             <div class="icon-shape icon-sm shadow border-radius-md bg-white text-center me-2 d-flex align-items-center justify-content-center">
-              <i class="fas fa-cogs text-dark"></i>
+              <i class="fas fa-sync text-dark"></i>
             </div>
-            <span class="nav-link-text ms-1">Settings</span>
+            <span class="nav-link-text ms-1">Update</span>
           </a>
         </li>
+      
+        
       @else
 
         <!-- Tenant menu items (subdomain) -->
@@ -130,6 +131,7 @@
             <span class="badge rounded-pill bg-primary ms-auto">Pro</span>
           </a>
         </li>
+       
         @endif
 
         @php

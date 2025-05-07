@@ -22,7 +22,7 @@
             </div>
             <div class="col-4 text-end">
               <div class="icon icon-shape bg-gradient-primary shadow text-center border-radius-md">
-                <i class="ni ni-shop text-lg opacity-10" aria-hidden="true"></i>
+                <i class="fas fa-store text-lg opacity-10" aria-hidden="true"></i>
               </div>
             </div>
           </div>
@@ -44,7 +44,7 @@
             </div>
             <div class="col-4 text-end">
               <div class="icon icon-shape bg-gradient-success shadow text-center border-radius-md">
-                <i class="ni ni-check-bold text-lg opacity-10" aria-hidden="true"></i>
+                <i class="fas fa-check-circle text-lg opacity-10" aria-hidden="true"></i>
               </div>
             </div>
           </div>
@@ -66,7 +66,7 @@
             </div>
             <div class="col-4 text-end">
               <div class="icon icon-shape bg-gradient-info shadow text-center border-radius-md">
-                <i class="ni ni-single-02 text-lg opacity-10" aria-hidden="true"></i>
+                <i class="fas fa-user text-lg opacity-10" aria-hidden="true"></i>
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@
             </div>
             <div class="col-4 text-end">
               <div class="icon icon-shape bg-gradient-warning shadow text-center border-radius-md">
-                <i class="ni ni-cart text-lg opacity-10" aria-hidden="true"></i>
+                <i class="fas fa-shopping-cart text-lg opacity-10" aria-hidden="true"></i>
               </div>
             </div>
           </div>
@@ -138,7 +138,7 @@
                     {{-- <a href="{{ route('stores.edit', $store) }}" class="text-secondary font-weight-bold text-xs me-2">
                       Edit
                     </a> --}}
-                    <a href="http://{{ $store->slug }}.localhost/admin" target="_blank" class="text-info font-weight-bold text-xs">
+                    <a href="http://{{ $store->slug }}.inventory.test" target="_blank" class="text-info font-weight-bold text-xs">
                       Access
                     </a>
                   </td>
@@ -161,7 +161,7 @@
             <li class="list-group-item border-0 d-flex justify-content-between ps-0 mb-2 border-radius-lg">
               <div class="d-flex align-items-center">
                 <div class="icon icon-shape icon-sm me-3 bg-gradient-dark shadow text-center">
-                  <i class="ni ni-mobile-button text-white opacity-10"></i>
+                  <i class="fas fa-store-alt text-white opacity-10"></i>
                 </div>
                 <div class="d-flex flex-column">
                   <h6 class="mb-1 text-dark text-sm">New Stores</h6>
@@ -170,15 +170,13 @@
               </div>
               <div class="d-flex align-items-center text-sm">
                 {{ $recentStoresCount }}
-                <button class="btn btn-link text-dark text-sm mb-0 px-0 ms-4">
-                  <i class="fas fa-file-pdf text-lg me-1"></i> Report
-                </button>
+               
               </div>
             </li>
             <li class="list-group-item border-0 d-flex justify-content-between ps-0 mb-2 border-radius-lg">
               <div class="d-flex align-items-center">
                 <div class="icon icon-shape icon-sm me-3 bg-gradient-dark shadow text-center">
-                  <i class="ni ni-tag text-white opacity-10"></i>
+                  <i class="fas fa-user-plus text-white opacity-10"></i>
                 </div>
                 <div class="d-flex flex-column">
                   <h6 class="mb-1 text-dark text-sm">New Users</h6>
@@ -187,9 +185,7 @@
               </div>
               <div class="d-flex align-items-center text-sm">
                 {{ $recentUsersCount }}
-                <button class="btn btn-link text-dark text-sm mb-0 px-0 ms-4">
-                  <i class="fas fa-file-pdf text-lg me-1"></i> Report
-                </button>
+                
               </div>
             </li>
           </ul>
