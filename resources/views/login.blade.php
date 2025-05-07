@@ -12,7 +12,7 @@
 @endif
   <title>
     @if(isset($store))
-      {{ $store->name }} - Login
+      {{ $store->name }} - Loginasjdhajshdkjahds
     @else
       Inventory Management System - Login
     @endif
