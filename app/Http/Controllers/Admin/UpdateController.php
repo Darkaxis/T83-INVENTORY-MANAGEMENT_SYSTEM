@@ -239,7 +239,7 @@ class UpdateController extends Controller
     /**
      * Download the update package
      */
-    protected function downloadUpdate($version)
+    public function downloadUpdate($version)
     {
         Log::info("Downloading update v{$version}");
         
@@ -274,7 +274,7 @@ class UpdateController extends Controller
     /**
      * Backup the current system
      */
-    protected function backupCurrentSystem($version)
+    public function backupCurrentSystem($version)
     {
         Log::info("Backing up current system (v{$version})");
         
@@ -340,7 +340,7 @@ class UpdateController extends Controller
     /**
      * Extract and apply the update
      */
-    protected function applyUpdate($zipPath, $version)
+    public function applyUpdate($zipPath, $version)
     {
         Log::info("Extracting update package");
         
@@ -390,7 +390,7 @@ class UpdateController extends Controller
     /**
      * Find the source directory in extracted update package
      */
-    protected function findSourceDirectory($extractDir)
+    public function findSourceDirectory($extractDir)
     {
         $directories = glob($extractDir . '/*', GLOB_ONLYDIR);
         
@@ -405,7 +405,7 @@ class UpdateController extends Controller
     /**
      * Copy files from source to destination, excluding specific paths
      */
-    protected function copyFiles($source, $destination, $excludes = [])
+    public function copyFiles($source, $destination, $excludes = [])
     {
         $dir = opendir($source);
         
@@ -442,7 +442,7 @@ class UpdateController extends Controller
     /**
      * Delete a directory and its contents
      */
-    protected function deleteDirectory($dir)
+    public function deleteDirectory($dir)
     {
         if (!is_dir($dir)) {
             return;
@@ -465,7 +465,7 @@ class UpdateController extends Controller
     /**
      * Update version in config file
      */
-    protected function updateVersionInConfig($version)
+    public function updateVersionInConfig($version)
     {
         // This is just a basic implementation - in real world you might
         // need to update an environment variable or config file
@@ -485,7 +485,7 @@ class UpdateController extends Controller
     /**
      * Run post-update tasks
      */
-    protected function runPostUpdateTasks($version)
+    public function runPostUpdateTasks($version)
     {
         Log::info("Running post-update tasks for v{$version}");
         
