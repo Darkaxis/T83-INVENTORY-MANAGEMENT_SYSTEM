@@ -110,7 +110,7 @@ class UpdateController extends Controller
             
             Log::info("System update to {$newVersion} completed successfully");
             
-            return redirect()->route('admin.system.updates')
+            return redirect()->route('admin.system.update')
                 ->with('success', "Successfully updated to version {$newVersion}!");
                 
         } catch (\Exception $e) {
@@ -125,7 +125,7 @@ class UpdateController extends Controller
                 'notes' => "Update failed. Error: " . $e->getMessage()
             ]);
             
-            return redirect()->route('admin.system.updates')
+            return redirect()->route('admin.system.update')
                 ->with('error', 'Update failed: ' . $e->getMessage());
         }
     }
@@ -150,7 +150,7 @@ class UpdateController extends Controller
             $backupFiles = glob($backupDir . "/backup-v*.zip");
             
             if (empty($backupFiles)) {
-                return redirect()->route('admin.system.updates')
+                return redirect()->route('admin.system.update')
                     ->with('error', 'No backup files found for rollback.');
             }
             
@@ -231,7 +231,7 @@ class UpdateController extends Controller
             
             Log::info("Rollback to version {$previousVersion} completed successfully");
             
-            return redirect()->route('admin.system.updates')
+            return redirect()->route('admin.system.update')
                 ->with('success', "System successfully rolled back to version {$previousVersion}")
                 ->with('warning', 'Database schema changes were NOT rolled back. If needed, restore your database manually.');
                 
@@ -241,7 +241,7 @@ class UpdateController extends Controller
                 'trace' => $e->getTraceAsString()
             ]);
             
-            return redirect()->route('admin.system.updates')
+            return redirect()->route('admin.system.update')
                 ->with('error', 'Rollback failed: ' . $e->getMessage());
         }
     }
