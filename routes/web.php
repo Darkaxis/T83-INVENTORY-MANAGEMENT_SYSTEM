@@ -95,16 +95,23 @@ Route::middleware(['web', 'admin'])->prefix('admin')->group(function () {
     Route::put('/settings/tenant', [TenantSettingsController::class, 'update'])->name('admin.settings.tenant.update');
 });
 
-Route::prefix('admin')->name('admin.')->group(function () {
-    // Other admin routes...
+Route::prefix('/system')->name('admin.system.')->middleware([ 'admin'])->group(function () {
+    // Updates listing page
+    Route::get('/updates', [App\Http\Controllers\Admin\UpdateController::class, 'index'])->name('updates');
     
-    Route::prefix('system')->name('system.')->group(function () {
-        Route::get('updates', [SystemUpdateController::class, 'index'])->name('updates');
-        Route::post('updates/check', [SystemUpdateController::class, 'check'])->name('updates.check');
-        Route::post('updates/{id}/download', [SystemUpdateController::class, 'download'])->name('updates.download');
-        Route::post('updates/{id}/install', [SystemUpdateController::class, 'install'])->name('updates.install');
-    });
+    // Check for updates
+    Route::post('/updates/check', [App\Http\Controllers\Admin\UpdateController::class, 'check'])->name('updates.check');
+    
+    // Download specific update
+    Route::post('/updates/{id}/download', [App\Http\Controllers\Admin\UpdateController::class, 'download'])->name('updates.download');
+    
+    // Install specific update
+    Route::post('/updates/{id}/install', [App\Http\Controllers\Admin\UpdateController::class, 'install'])->name('updates.install');
+    
+    // Rollback route
+    Route::post('/update/rollback', [App\Http\Controllers\Admin\UpdateController::class, 'rollback'])->name('update.rollback');
 });
+
 
 Route::middleware(['web', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
