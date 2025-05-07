@@ -53,14 +53,14 @@ class UpdateController extends Controller
     }
     
     /**
-     * Check for updates
+     * Check for the latest release on GitHub
      */
-    public function check()
+    public function checkForUpdates()
     {
         Cache::forget('latest_github_release');
         $latestRelease = $this->checkLatestRelease();
         
-        return redirect()->route('admin.system.updates')
+        return redirect()->route('admin.system.update')
             ->with('success', 'Successfully checked for updates.');
     }
     
@@ -110,7 +110,7 @@ class UpdateController extends Controller
             
             Log::info("System update to {$newVersion} completed successfully");
             
-            return redirect()->route('admin.system.update')
+            return redirect()->route('admin.system.updates')
                 ->with('success', "Successfully updated to version {$newVersion}!");
                 
         } catch (\Exception $e) {
@@ -125,116 +125,8 @@ class UpdateController extends Controller
                 'notes' => "Update failed. Error: " . $e->getMessage()
             ]);
             
-            return redirect()->route('admin.system.update')
+            return redirect()->route('admin.system.updates')
                 ->with('error', 'Update failed: ' . $e->getMessage());
-        }
-    }
-    
-    /**
-     * Rollback to the previous version
-     *
-     * @param Request $request
-     * @return \Illuminate\Http\RedirectResponse
-     */
-    public function rollback(Request $request)
-    {
-        // Prevent timeout for long-running operation
-        set_time_limit(0);
-        ini_set('memory_limit', '512M');
-        
-        $debugMode = true;
-        $this->logDebug('Starting rollback process', $debugMode);
-        
-        try {
-            $currentVersion = $this->updater->source()->getVersionInstalled();
-            $this->logDebug("Current version: {$currentVersion}", $debugMode);
-            
-            // Find latest backup file
-            $updatePath = storage_path('app/updater');
-            $backupFiles = glob($updatePath . DIRECTORY_SEPARATOR . "backup-v*.zip");
-            
-            if (empty($backupFiles)) {
-                return redirect()->route('tenant.updates.index', ['slug' => $this->getSlug()])
-                    ->with('error', 'No backup files found for rollback.');
-            }
-            
-            // Sort by modification time (newest first)
-            usort($backupFiles, function($a, $b) {
-                return filemtime($b) - filemtime($a);
-            });
-            
-            $backupFile = $backupFiles[0];
-            $this->logDebug("Using backup file: {$backupFile}", $debugMode);
-            
-            // Extract version from backup filename
-            preg_match('/backup-v(.+?)\.zip$/', $backupFile, $matches);
-            $previousVersion = $matches[1] ?? 'unknown';
-            $this->logDebug("Detected previous version: {$previousVersion}", $debugMode);
-            
-            // Extract backup to temporary directory
-            $extractPath = $updatePath . DIRECTORY_SEPARATOR . "rollback-temp";
-            if (file_exists($extractPath)) {
-                $this->deleteDirectory($extractPath);
-            }
-            mkdir($extractPath, 0755, true);
-            
-            $zip = new \ZipArchive();
-            if ($zip->open($backupFile) !== true) {
-                return redirect()->route('tenant.updates.index', ['slug' => $this->getSlug()])
-                    ->with('error', 'Failed to open backup file.');
-            }
-            
-            $this->logDebug("Extracting backup to: {$extractPath}", $debugMode);
-            $zip->extractTo($extractPath);
-            $zip->close();
-            
-            // Define exclusion patterns (same as during update)
-            $exclude = [
-                '.env',
-                'storage',
-                'vendor',
-                '.git',
-                'node_modules',
-                'public/uploads',
-                'public/storage',
-                '*.log',
-                'storage/logs',
-                'bootstrap/cache',
-                'admin-server.log',
-                'laravel.log',
-                '.env.backup',
-                '.DS_Store',
-                'phpunit.xml'
-            ];
-            
-            // Copy files from backup to application root
-            $rootPath = base_path();
-            $this->logDebug("Copying files from backup to {$rootPath}", $debugMode);
-            $this->copyUpdateFiles($extractPath, $rootPath, $exclude);
-            
-            // Clean up
-            $this->deleteDirectory($extractPath);
-            
-            // Update environment variable to previous version
-            $this->updateEnvVersion($previousVersion);
-            
-            // Clear caches
-            Artisan::call('config:clear');
-            Artisan::call('cache:clear');
-            Artisan::call('view:clear');
-            Artisan::call('route:clear');
-            
-            // No automatic database rollback - this could be dangerous
-            // Instead show a warning message
-            
-            return redirect()->route('tenant.updates.index', ['slug' => $this->getSlug()])
-                ->with('success', "System rolled back to version {$previousVersion} successfully!")
-                ->with('warning', 'Database schema changes were NOT rolled back. If you need to rollback migrations, do so manually.');
-                
-        } catch (\Exception $e) {
-            $this->logDebug("Rollback failed: " . $e->getMessage(), $debugMode, 'error');
-            return redirect()->route('tenant.updates.index', ['slug' => $this->getSlug()])
-                ->with('error', 'Rollback failed: ' . $e->getMessage());
         }
     }
     

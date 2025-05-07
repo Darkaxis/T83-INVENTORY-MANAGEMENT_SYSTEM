@@ -13,7 +13,7 @@ class StoreStaffMemberRequest extends FormRequest
     public function authorize(): bool
     {
         // Only store owners and managers can add staff
-        return true; // Adjust this based on your authorization logic
+        return in_array($this->user()->role, ['admin', 'store_owner', 'manager']);
     }
 
     /**
