@@ -172,7 +172,7 @@
         </li>
 
         <!-- Settings - Only for managers and if tier is Starter or Pro -->
-        @if($tierLevel == 'starter' || $tierLevel == 'pro')
+        @if($tierLevel == 'starter' || $tierLevel == 'pro' || $tierLevel == 'unlimited')
         <li class="nav-item">
           <a class="nav-link text-dark font-weight-bold {{ request()->routeIs('settings.*') ? 'active bg-light' : '' }}"
              href="{{ route('settings.index', ['subdomain' => $subdomain]) }}">
