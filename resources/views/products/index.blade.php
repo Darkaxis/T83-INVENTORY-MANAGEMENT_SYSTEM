@@ -22,9 +22,7 @@
                 <button class="btn btn-secondary" disabled title="Product limit reached">
                     <i class="fas fa-plus-circle me-2"></i>Add Product
                 </button>
-                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-success ms-2">
-                    <i class="fas fa-arrow-up me-1"></i> Upgrade
-                </a>
+            
             @endif
         </div>
     </div>

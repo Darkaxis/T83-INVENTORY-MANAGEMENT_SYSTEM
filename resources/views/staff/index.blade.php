@@ -76,13 +76,7 @@
                                  aria-valuemax="100"></div>
                         </div>
                         
-                        @if($staffPercentUsed > 75)
-                            <div class="text-center mt-3">
-                                <a href="{{ route('subscription.index', ['subdomain' => $store->slug]) }}" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-arrow-circle-up me-1"></i> Upgrade Plan
-                                </a>
-                            </div>
-                        @endif
+                       
                     </div>
                 </div>
             </div>
