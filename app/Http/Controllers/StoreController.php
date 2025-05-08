@@ -78,9 +78,6 @@ class StoreController extends Controller
             $this->createDatabase($store);
             Log::info("Store created and database created", ['store_id' => $store->id, 'slug' => $store->slug]);
         }
-
-        
-        
         
             return redirect()->route('stores.index' )
             ->with('success', 'Store created successfully. ' . 
@@ -209,24 +206,93 @@ class StoreController extends Controller
 
     public function destroy(Store $store)
     {
-        // Delete database if it exists
-        if ($store->database_created) {
-            try {
+        try {
+            // Start a database transaction
+            DB::beginTransaction();
+            
+            // Store name for confirmation message
+            $storeName = $store->name;
+            $storeId = $store->id;
+            
+            Log::info("Starting deletion of store ID {$storeId}: {$storeName}");
+            
+            // Check for any tickets that might still be linked
+            $ticketCount = DB::table('support_tickets')->where('store_id', $storeId)->count();
+            Log::info("Found {$ticketCount} support tickets to delete for store {$storeId}");
+            
+            // Delete with raw queries to bypass any potential Eloquent issues
+            if ($ticketCount > 0) {
+                // Get all ticket IDs for this store
+                $ticketIds = DB::table('support_tickets')
+                    ->where('store_id', $storeId)
+                    ->pluck('id')
+                    ->toArray();
+                
+                Log::info("Ticket IDs to delete: " . implode(', ', $ticketIds));
+                
+                // Delete attachments linked to messages in these tickets
+                $attachmentsDeleted = DB::delete("
+                    DELETE FROM ticket_attachments 
+                    WHERE message_id IN (
+                        SELECT id FROM support_messages 
+                        WHERE ticket_id IN (" . implode(',', $ticketIds) . ")
+                    )
+                ");
+                Log::info("Deleted {$attachmentsDeleted} ticket attachments");
+                
+                // Delete messages for these tickets
+                $messagesDeleted = DB::delete("
+                    DELETE FROM support_messages 
+                    WHERE ticket_id IN (" . implode(',', $ticketIds) . ")
+                ");
+                Log::info("Deleted {$messagesDeleted} support messages");
+                
+                // Delete the tickets themselves with direct query
+                $ticketsDeleted = DB::delete("DELETE FROM support_tickets WHERE store_id = ?", [$storeId]);
+                Log::info("Deleted {$ticketsDeleted} support tickets");
+            }
+            
+            // Delete any other known relations 
+            // Products
+            $productsDeleted = DB::table('products')->where('store_id', $storeId)->delete();
+            Log::info("Deleted {$productsDeleted} products");
+            
+            // Categories
+            $categoriesDeleted = DB::table('categories')->where('store_id', $storeId)->delete();
+            Log::info("Deleted {$categoriesDeleted} categories");
+            
+            // StoreUser relations
+            $storeUsersDeleted = DB::table('store_users')->where('store_id', $storeId)->delete();
+            Log::info("Deleted {$storeUsersDeleted} store user relationships");
+            
+            // Delete the store with direct query
+            $storeDeleted = DB::delete("DELETE FROM stores WHERE id = ?", [$storeId]);
+            Log::info("Store deletion result: {$storeDeleted}");
+            
+            // Drop tenant database if it exists
+            if ($store->database_created) {
                 $databaseName = 'tenant_' . $store->slug;
                 $this->databaseManager->dropDatabase($databaseName);
-                Log::info("Deleted database for store", ['store_id' => $store->id, 'database' => $databaseName]);
-            } catch (\Exception $e) {
-                Log::error("Failed to delete database: " . $e->getMessage(), [
-                    'store_id' => $store->id, 
-                    'database' => 'tenant_' . $store->slug
-                ]);
+                Log::info("Dropped tenant database {$databaseName}");
             }
+            
+            DB::commit();
+            
+            return redirect()->route('stores.index')
+                ->with('success', "Store '{$storeName}' and all its data deleted successfully.");
+        } 
+        catch (\Exception $e) {
+            DB::rollBack();
+            
+            Log::error("Failed to delete store: " . $e->getMessage(), [
+                'store_id' => $store->id, 
+                'exception_class' => get_class($e),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('stores.index')
+                ->with('error', 'Failed to delete store: ' . $e->getMessage());
         }
-
-        $store->delete();
-        
-        return redirect()->route('stores.index')
-            ->with('success', 'Store deleted successfully.');
     }
 
 public function approve(Request $request, Store $store)
@@ -236,11 +302,13 @@ public function approve(Request $request, Store $store)
         $store->update([
             'approved' => true,
             'status' => 'active' // Automatically set to active when approved
+            
         ]);
         
         // Create database if not already created
         if (!$store->database_created) {
             $this->createDatabase($store);
+            $store->update(['database_created' => true]);
         }
         
         // Check if the email already exists in the main database
@@ -361,6 +429,7 @@ public function approve(Request $request, Store $store)
                 ]);
             }
         }
+
             
         return redirect()->route('stores.index')
             ->with('success', 'Store approved and database created successfully.' . 
