@@ -7,44 +7,55 @@
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col-lg-8">
-            <h1 class="h3 mb-0 text-gray-800">Support Tickets</h1>
-            <p class="mb-4">Manage your support requests and get help from our team</p>
+            <h1 class="h3 mb-0">Support Tickets</h1>
+            <p class="mb-4 text-muted">Manage your support requests and get help from our team</p>
         </div>
         <div class="col-lg-4 text-end">
-            <a href="{{ route('tenant.support.create') }}" class="btn bg-gradient-primary">
+            <a href="{{ route('tenant.support.create') }}" class="btn btn-{{ $store->settings->theme_color ?? 'primary' }}">
                 <i class="fas fa-plus me-2"></i> Create Ticket
             </a>
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success shadow-sm border-start border-success border-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
+                <div>{{ session('success') }}</div>
+            </div>
+        </div>
     @endif
 
-    <div class="card">
-        <div class="card-header p-3">
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-transparent">
             <div class="row">
                 <div class="col-md-6">
                     <h5 class="mb-0">Your Support Tickets</h5>
                 </div>
                 <div class="col-md-6 text-end">
-                    <span class="badge bg-primary me-2">Open: {{ $tickets->where('status', 'open')->count() }}</span>
-                    <span class="badge bg-warning me-2">In Progress: {{ $tickets->where('status', 'in_progress')->count() }}</span>
-                    <span class="badge bg-success">Resolved: {{ $tickets->where('status', 'resolved')->count() }}</span>
+                    <span class="badge bg-primary me-2">
+                        Open: {{ $tickets->where('status', 'open')->count() }}
+                    </span>
+                    <span class="badge bg-warning me-2">
+                        In Progress: {{ $tickets->where('status', 'in_progress')->count() }}
+                    </span>
+                    <span class="badge bg-success">
+                        Resolved: {{ $tickets->where('status', 'resolved')->count() }}
+                    </span>
                 </div>
             </div>
         </div>
         <div class="table-responsive">
             @if($tickets->count() > 0)
                 <table class="table align-items-center mb-0">
-                    <thead>
+                    <thead class="bg-light">
                         <tr>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7">Ticket</th>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Category</th>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Status</th>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Priority</th>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Created</th>
-                            <th class="text-uppercase text-xxs font-weight-bolder opacity-7 ps-2">Last Updated</th>
+                            <th>Ticket</th>
+                            <th>Category</th>
+                            <th>Status</th>
+                            <th>Priority</th>
+                            <th>Created</th>
+                            <th>Last Updated</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -100,8 +111,8 @@
                                     </span>
                                 </td>
                                 <td class="align-middle">
-                                    <a href="{{ route('tenant.support.show', $ticket->id) }}" class="btn btn-link text-dark px-3 mb-0">
-                                        <i class="fas fa-eye text-dark me-2"></i>View
+                                    <a href="{{ route('tenant.support.show', $ticket->id) }}" class="btn btn-link text-primary px-3 mb-0">
+                                        <i class="fas fa-eye text-primary me-2"></i>View
                                     </a>
                                 </td>
                             </tr>

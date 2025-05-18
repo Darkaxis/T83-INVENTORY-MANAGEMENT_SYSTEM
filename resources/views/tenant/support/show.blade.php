@@ -37,9 +37,7 @@
 <div class="container-fluid py-4">
     <div class="row mb-4">
         <div class="col-lg-6">
-            <h1 class="h3 mb-0 text-gray-800">
-                Ticket #{{ $ticket->id }}
-            </h1>
+            <h1 class="h3 mb-0">Ticket #{{ $ticket->id }}</h1>
             <p class="mb-1">{{ $ticket->subject }}</p>
         </div>
         <div class="col-lg-6 text-end">
@@ -69,20 +67,25 @@
                 @endif
             </span>
             
-            <a href="{{ route('tenant.support.index') }}" class="btn btn-outline-secondary btn-sm">
+            <a href="{{ route('tenant.support.index') }}" class="btn btn-{{ $store->settings->theme_color ?? 'primary' }}">
                 <i class="fas fa-arrow-left me-1"></i> Back to Tickets
             </a>
         </div>
     </div>
 
     @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
+        <div class="alert alert-success shadow-sm border-start border-success border-4">
+            <div class="d-flex align-items-center">
+                <i class="fas fa-check-circle text-success me-3 fa-2x"></i>
+                <div>{{ session('success') }}</div>
+            </div>
+        </div>
     @endif
 
     <div class="row">
         <div class="col-lg-8">
-            <div class="card mb-4">
-                <div class="card-header p-3">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0">Conversation</h5>
                 </div>
                 <div class="card-body">
@@ -91,7 +94,7 @@
                             <div class="message-container @if($message->is_admin) text-end @endif">
                                 <div class="message-bubble @if($message->is_admin) message-admin ms-auto @else message-user me-auto @endif" style="max-width: 80%;">
                                     <div class="d-flex @if($message->is_admin) justify-content-end @else justify-content-between @endif align-items-center mb-2">
-                                        <span class="fw-bold">
+                                        <span class="fw-bold text-{{ $message->is_admin ? 'primary' : 'dark' }}">
                                             @if($message->is_admin)
                                                 Support Team
                                             @else
@@ -107,7 +110,7 @@
                                             <div class="text-muted small mb-1">Attachments:</div>
                                             @foreach($message->attachments as $attachment)
                                                 <div class="attachment-item">
-                                                    <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank">
+                                                    <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank" class="text-primary">
                                                         <i class="fas fa-paperclip me-1"></i>
                                                         {{ $attachment->file_name }}
                                                     </a>
@@ -150,8 +153,8 @@
         </div>
         
         <div class="col-lg-4">
-            <div class="card mb-4">
-                <div class="card-header p-3">
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-transparent">
                     <h5 class="mb-0">Ticket Information</h5>
                 </div>
                 <div class="card-body">
@@ -169,7 +172,7 @@
                     </div>
                     <div class="d-flex justify-content-between mb-2">
                         <span class="text-muted">Submitted By:</span>
-                      
+                        <span>You</span>
                     </div>
                     
                     @if($ticket->status != 'closed')

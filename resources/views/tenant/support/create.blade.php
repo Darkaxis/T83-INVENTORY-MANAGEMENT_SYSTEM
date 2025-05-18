@@ -103,7 +103,7 @@
                         <a href="{{ route('tenant.support.index') }}" class="btn btn-outline-secondary">Cancel</a>
                         
                         
-                        <button type="submit" class="btn bg-gradient-primary">
+                        <button type="submit" class="btn btn-{{ $store->settings->theme_color ?? 'primary' }}">
                             
                             <i class="fas fa-paper-plane me-2"></i> Submit Ticket
                         </button>
