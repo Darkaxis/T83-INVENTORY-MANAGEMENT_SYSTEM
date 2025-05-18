@@ -42,16 +42,11 @@ class AdminSupportController extends Controller
         $ticket = SupportTicket::findOrFail($id);
         $ticket->update(['status' => $request->status]);
         
-        // Get the current authenticated admin user ID - this MUST exist in the main database
-        $adminUserId = 2;
-        
-        // If no authenticated user, use a fallback admin user that we know exists
-     
-        
         // Create message with valid admin user ID from main database
         $message = SupportMessage::create([
             'ticket_id' => $ticket->id,
-            'user_id' => $adminUserId, // Use a valid user ID from main database
+            'user_id' => Auth::id(),  // Use the admin's ID
+            'tenant_user_id' => null, // No tenant user for admin messages
             'message' => $request->message,
             'is_admin' => true
         ]);

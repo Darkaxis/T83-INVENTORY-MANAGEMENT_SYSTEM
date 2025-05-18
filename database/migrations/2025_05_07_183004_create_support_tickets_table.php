@@ -38,16 +38,7 @@ return new class extends Migration
             $table->foreign('user_id')->references('id')->on('users');
         });
 
-        Schema::create('ticket_attachments', function (Blueprint $table) {
-            $table->id();
-            $table->unsignedBigInteger('message_id');
-            $table->string('file_name');
-            $table->string('file_path');
-            $table->string('file_type');
-            $table->timestamps();
-            
-            $table->foreign('message_id')->references('id')->on('support_messages')->onDelete('cascade');
-        });
+     
     }
 
     /**

@@ -30,12 +30,6 @@ class TenantSupportController extends Controller
     
     public function store(Request $request)
     {
-        // Debug logging
-        Log::info('Support ticket submission received', [
-            'all_request' => $request->all(),
-            'session_user' => session('tenant_user_id')
-        ]);
-        
         try {
             $validatedData = $request->validate([
                 'subject' => 'required|string|max:255',
@@ -45,40 +39,55 @@ class TenantSupportController extends Controller
                 'attachments.*' => 'nullable|file|max:10240'
             ]);
             
-            Log::info('Validation passed', $validatedData);
-            
             $store = request()->store;
             
-            // Get tenant user ID with fallback options
-            $tenantUserId = session('tenant_user_id'); // Fallback to ID 1 for testing
+            // Get tenant user ID from session
+            $tenantUserId = session('tenant_user_id', 1);
             
-            Log::info("Using tenant user ID: $tenantUserId for store: {$store->id}");
-            
-            // Create ticket without validation temporarily
+            // Create the ticket
             $ticket = SupportTicket::create([
                 'store_id' => $store->id,
-                'tenant_user_id' => $tenantUserId,
+                'user_id' => $tenantUserId,  // This works for the ticket
                 'subject' => $request->subject,
                 'category' => $request->category,
                 'priority' => $request->priority,
                 'status' => 'open'
             ]);
             
-            Log::info('Ticket created', ['ticket_id' => $ticket->id]);
+            // Create the message with NULL for user_id and tenant_user_id for the tenant user
+            $message = SupportMessage::create([
+                'ticket_id' => $ticket->id,
+                'user_id' => null,  // Set to NULL to avoid foreign key issues
+                'tenant_user_id' => $tenantUserId,  // Use the new tenant_user_id column
+                'message' => $request->message,
+                'is_admin' => false
+            ]);
             
-            // Continue with message creation...
+            // Handle attachments
+            if ($request->hasFile('attachments')) {
+                foreach ($request->file('attachments') as $file) {
+                    $path = $file->store('ticket-attachments', 'public');
+                    
+                    TicketAttachment::create([
+                        'message_id' => $message->id,
+                        'file_name' => $file->getClientOriginalName(),
+                        'file_path' => $path,
+                        'file_type' => $file->getMimeType()
+                    ]);
+                }
+            }
             
-            return redirect()
-                ->route('tenant.support.index')
-                ->with('success', 'Support ticket created successfully');
+            return redirect()->route('tenant.support.show', $ticket->id)
+                ->with('success', 'Your support ticket has been submitted successfully.');
         }
         catch (\Exception $e) {
             Log::error('Error creating support ticket: ' . $e->getMessage(), [
-                'exception' => $e,
-                'trace' => $e->getTraceAsString()
+                'exception' => get_class($e),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
             ]);
             
-            return back()
+            return redirect()->back()
                 ->withInput()
                 ->with('error', 'Error creating ticket: ' . $e->getMessage());
         }
@@ -108,7 +117,7 @@ class TenantSupportController extends Controller
             ->where('id', $id)
             ->firstOrFail();
             
-        // Get tenant user ID - this is from the tenant context
+        // Get tenant user ID
         $tenantUserId = session('tenant_user_id');
         
         // If ticket was closed, reopen it
@@ -116,9 +125,11 @@ class TenantSupportController extends Controller
             $ticket->update(['status' => 'waiting']);
         }
         
+        // Use null for user_id and tenant_user_id for tenant user
         $message = SupportMessage::create([
             'ticket_id' => $ticket->id,
-            'tenant_user_id' => $tenantUserId,
+            'user_id' => null,  // Set to NULL
+            'tenant_user_id' => $tenantUserId,  // Use tenant_user_id for the tenant
             'message' => $request->message,
             'is_admin' => false
         ]);

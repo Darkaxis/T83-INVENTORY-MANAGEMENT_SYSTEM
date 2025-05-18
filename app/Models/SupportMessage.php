@@ -8,7 +8,11 @@ use Illuminate\Support\Facades\DB;
 class SupportMessage extends Model
 {
     protected $fillable = [
-        'ticket_id', 'user_id', 'message', 'is_admin'
+        'ticket_id',
+        'user_id',
+        'tenant_user_id', // Add this line
+        'message',
+        'is_admin'
     ];
     
     public function ticket()
