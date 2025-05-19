@@ -10,6 +10,7 @@ use App\Http\Controllers\StoreProductController;
 use App\Http\Controllers\StoreStaffController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\StaffController;
+use App\Http\Controllers\TestController;
 use App\Http\Controllers\ProfileController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\SystemUpdateController;
@@ -70,6 +71,7 @@ Route::middleware(['web'])->group(function () {
         ->name('public.store-requests.store');
     Route::get('/request-store/thank-you/{storeRequest}', [StoreController::class, 'thankYou'])
         ->name('public.store-requests.thank-you');
+    Route::get('/test', [TestController::class, 'index'])->name('test.index');
 });
 
 /**

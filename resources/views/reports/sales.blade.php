@@ -55,7 +55,6 @@
                         <option value="week" {{ $groupBy == 'week' ? 'selected' : '' }}>Week</option>
                         <option value="month" {{ $groupBy == 'month' ? 'selected' : '' }}>Month</option>
                         <option value="product" {{ $groupBy == 'product' ? 'selected' : '' }}>Product</option>
-                        <option value="category" {{ $groupBy == 'category' ? 'selected' : '' }}>Category</option>
                         <option value="cashier" {{ $groupBy == 'cashier' ? 'selected' : '' }}>Cashier</option>
                     </select>
                 </div>
