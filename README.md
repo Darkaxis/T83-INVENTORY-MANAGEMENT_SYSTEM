@@ -53,8 +53,6 @@ npm install && npm run build
 # Copy and configure environment variables
 cp .env.example .env
 
-# Generate app key
-php artisan key:generate
 
 # Run database migrations and seeders
 php artisan migrate --seed
