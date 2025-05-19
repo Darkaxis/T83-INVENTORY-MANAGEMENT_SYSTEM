@@ -137,7 +137,7 @@
               <i class="fas fa-chart-bar text-dark"></i>
             </div>
             <span class="nav-link-text ms-1">Reports</span>
-            <span class="badge rounded-pill bg-primary ms-auto">Pro</span>
+            
           </a>
         </li>
        
