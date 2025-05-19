@@ -13,14 +13,16 @@ return new class extends Migration
     {
         Schema::create('system_updates', function (Blueprint $table) {
             $table->id();
-            $table->string('version');
-            $table->string('status'); // checking, downloading, installing, completed, failed
-            $table->text('release_notes')->nullable();
+            $table->string('version_from');
+            $table->string('version_to');
+            $table->unsignedBigInteger('requested_by');
+            $table->enum('status', ['processing', 'completed', 'failed'])->default('processing');
+            $table->text('notes')->nullable();
             $table->text('error_message')->nullable();
-            $table->timestamp('checked_at')->nullable();
-            $table->timestamp('downloaded_at')->nullable();
-            $table->timestamp('installed_at')->nullable();
+            $table->timestamp('completed_at')->nullable();
             $table->timestamps();
+            
+            $table->foreign('requested_by')->references('id')->on('users');
         });
     }
 
